@@ -11,48 +11,62 @@
   <script src="https://cdn.jsdelivr.net/npm/meyda/dist/web/meyda.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 
   <style>
     /* =============================================
        DESIGN TOKENS
     ============================================= */
     :root {
-      --bg-void:       #050810;
-      --bg-deep:       #080d1a;
-      --bg-panel:      #0c1425;
-      --bg-card:       #101c30;
-      --bg-card-hover: #152238;
-      --bg-glass:      rgba(16, 28, 48, 0.7);
+      /* Apple/Tesla-inspired neutral base */
+      --bg-void:       #000000;
+      --bg-deep:       #0d0d0d;
+      --bg-panel:      #111111;
+      --bg-card:       #1a1a1a;
+      --bg-card-hover: #222222;
+      --bg-glass:      rgba(12, 12, 12, 0.92);
 
-      --cyan:          #00e5ff;
-      --cyan-dim:      rgba(0, 229, 255, 0.15);
-      --cyan-glow:     rgba(0, 229, 255, 0.4);
-      --amber:         #ffb700;
-      --amber-dim:     rgba(255, 183, 0, 0.15);
-      --green:         #00ff88;
-      --green-dim:     rgba(0, 255, 136, 0.1);
-      --red:           #ff3d5a;
-      --red-dim:       rgba(255, 61, 90, 0.15);
-      --purple:        #a855f7;
+      /* Single accent: Apple blue */
+      --accent:        #2997ff;
+      --accent-dim:    rgba(41, 151, 255, 0.12);
+      --accent-glow:   rgba(41, 151, 255, 0.3);
 
-      --text-primary:  #e8f4ff;
-      --text-secondary:#8aa0bc;
-      --text-muted:    #445566;
-      --text-data:     #00e5ff;
+      /* Backward-compat aliases — existing code uses these */
+      --cyan:          #2997ff;
+      --cyan-dim:      rgba(41, 151, 255, 0.12);
+      --cyan-glow:     rgba(41, 151, 255, 0.3);
 
-      --border:        rgba(0, 229, 255, 0.12);
-      --border-bright: rgba(0, 229, 255, 0.35);
+      /* System-state colors (Apple HIG) */
+      --amber:         #f5a623;
+      --amber-dim:     rgba(245, 166, 35, 0.12);
+      --green:         #30d158;
+      --green-dim:     rgba(48, 209, 88, 0.1);
+      --red:           #ff453a;
+      --red-dim:       rgba(255, 69, 58, 0.12);
+      --purple:        #bf5af2;
 
-      --font-display:  'Syne', sans-serif;
+      /* Typography */
+      --text-primary:  #f5f5f7;
+      --text-secondary:#86868b;
+      --text-muted:    #3a3a3c;
+      --text-data:     #2997ff;
+
+      /* Borders */
+      --border:        rgba(255, 255, 255, 0.07);
+      --border-bright: rgba(255, 255, 255, 0.15);
+
+      /* Fonts */
+      --font-display:  'Inter', 'SF Pro Display', -apple-system, sans-serif;
       --font-mono:     'JetBrains Mono', monospace;
 
-      --radius-sm:     4px;
-      --radius:        8px;
+      /* Spacing & shape */
+      --radius-sm:     6px;
+      --radius:        10px;
       --radius-lg:     16px;
 
-      --transition:    200ms cubic-bezier(0.4, 0, 0.2, 1);
-      --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+      /* Motion */
+      --transition:    180ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow: 360ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     /* =============================================
@@ -65,36 +79,14 @@
       overflow: hidden;
       background: var(--bg-void);
       color: var(--text-primary);
-      font-family: var(--font-mono);
+      font-family: var(--font-display);
       font-size: 14px;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Animated grid background */
-    body::before {
-      content: '';
-      position: fixed; inset: 0; z-index: 0;
-      background-image:
-        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
-      background-size: 48px 48px;
-      animation: gridShift 20s linear infinite;
-      pointer-events: none;
-    }
-    @keyframes gridShift {
-      0% { background-position: 0 0; }
-      100% { background-position: 48px 48px; }
-    }
-
-    /* Ambient glow orbs */
-    body::after {
-      content: '';
-      position: fixed; inset: 0; z-index: 0;
-      background:
-        radial-gradient(ellipse 600px 400px at 20% 80%, rgba(0,229,255,0.04) 0%, transparent 70%),
-        radial-gradient(ellipse 400px 600px at 80% 20%, rgba(168,85,247,0.04) 0%, transparent 70%);
-      pointer-events: none;
-    }
+    /* No decorative backgrounds — clean Apple/Tesla aesthetic */
+    body::before { display: none; }
+    body::after  { display: none; }
 
     /* =============================================
        SCREEN SYSTEM
@@ -115,24 +107,14 @@
        SHARED COMPONENTS
     ============================================= */
 
-    /* Scanline overlay */
-    .scanlines {
-      position: fixed; inset: 0; z-index: 100;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,0,0,0.03) 2px,
-        rgba(0,0,0,0.03) 4px
-      );
-      pointer-events: none;
-    }
+    /* Scanlines removed — clean aesthetic */
+    .scanlines { display: none; }
 
-    /* Glowing horizontal line decorations */
+    /* Horizontal line decorations */
     .h-rule {
       height: 1px;
-      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-      opacity: 0.4;
+      background: linear-gradient(90deg, transparent, var(--border-bright), transparent);
+      opacity: 0.6;
     }
 
     /* Status pill */
@@ -619,7 +601,6 @@
     .metric-card-value {
       font-size: 28px; font-weight: 500; letter-spacing: -0.02em;
       color: var(--metric-color, var(--cyan));
-      text-shadow: 0 0 20px var(--metric-glow, var(--cyan-glow));
       line-height: 1;
       margin-bottom: 4px;
       transition: all var(--transition);
@@ -653,7 +634,6 @@
       background: linear-gradient(90deg, var(--metric-color, var(--cyan)), var(--metric-color-alt, var(--purple)));
       border-radius: 2px;
       transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 0 8px var(--metric-glow, var(--cyan-glow));
     }
 
     /* =============================================
@@ -833,153 +813,150 @@
     .video-bracket.bl { bottom: 16px; left: 16px; border-width: 0 0 2px 2px; }
     .video-bracket.br { bottom: 16px; right: 16px; border-width: 0 2px 2px 0; }
 
-    /* Video status badge */
-    .video-status-badge {
-      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    /* =============================================
+       CAMERA VIEW MODES
+    ============================================= */
+    .cam-mode-toggle {
+      position: absolute; bottom: 12px; right: 12px;
+      display: flex; gap: 4px;
       z-index: 10;
     }
-
-    /* =============================================
-       FLAG / ALERT OVERLAY
-    ============================================= */
-    #flag-overlay {
-      position: fixed;
-      top: 72px; left: 50%; transform: translateX(-50%);
-      z-index: 300;
-      display: flex; flex-direction: column; gap: 8px;
-      align-items: center;
-      pointer-events: none;
-      width: 500px;
-    }
-
-    .flag-toast {
-      width: 100%;
-      display: flex; align-items: flex-start; gap: 12px;
-      padding: 12px 16px;
-      border-radius: var(--radius);
-      border: 1px solid;
-      background: var(--bg-glass);
-      backdrop-filter: blur(16px);
-      animation: flagIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    }
-    @keyframes flagIn {
-      from { opacity: 0; transform: translateY(-12px) scale(0.95); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    .flag-toast.severity-high   { border-color: var(--red);   }
-    .flag-toast.severity-medium { border-color: var(--amber); }
-    .flag-toast.severity-low    { border-color: var(--cyan);  }
-
-    .flag-icon {
-      font-size: 18px;
-      flex-shrink: 0; margin-top: 1px;
-    }
-    .flag-content { flex: 1; }
-    .flag-type {
-      font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
-      margin-bottom: 2px;
-    }
-    .flag-toast.severity-high   .flag-type { color: var(--red);   }
-    .flag-toast.severity-medium .flag-type { color: var(--amber); }
-    .flag-toast.severity-low    .flag-type { color: var(--cyan);  }
-    .flag-message { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
-
-    /* =============================================
-       INTERVENTION OVERLAY
-    ============================================= */
-    #intervention-overlay {
-      position: fixed; inset: 0; z-index: 400;
-      background: rgba(5, 8, 16, 0.88);
-      backdrop-filter: blur(8px);
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0; pointer-events: none;
-      transition: opacity var(--transition-slow);
-    }
-    #intervention-overlay.active {
-      opacity: 1; pointer-events: all;
-    }
-
-    .intervention-card {
-      width: 560px;
-      background: var(--bg-panel);
-      border: 1px solid var(--border-bright);
-      border-radius: var(--radius-lg);
-      padding: 40px;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px var(--border-bright);
-    }
-    .intervention-card::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: linear-gradient(90deg, transparent, var(--intervention-color, var(--cyan)), transparent);
-    }
-    .intervention-card::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: radial-gradient(ellipse 400px 200px at 50% 0%, var(--intervention-glow, var(--cyan-dim)) 0%, transparent 60%);
-      pointer-events: none;
-    }
-
-    .intervention-eyebrow {
-      font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
-      color: var(--intervention-color, var(--cyan));
-      margin-bottom: 16px;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .intervention-eyebrow::after {
-      content: '';
-      flex: 1; height: 1px;
-      background: linear-gradient(90deg, var(--intervention-color, var(--cyan)), transparent);
-      opacity: 0.3;
-    }
-
-    .intervention-title {
-      font-family: var(--font-display); font-size: 26px; font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 16px;
-    }
-
-    .intervention-content {
-      font-size: 14px; line-height: 1.8;
-      color: var(--text-secondary);
-      margin-bottom: 28px;
-      min-height: 60px;
-    }
-
-    .intervention-progress {
-      height: 3px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .intervention-progress-bar {
-      height: 100%;
-      background: var(--intervention-color, var(--cyan));
-      border-radius: 2px;
-      width: 100%;
-      transition: width linear;
-      box-shadow: 0 0 8px var(--intervention-glow, var(--cyan-glow));
-    }
-
-    .intervention-dismiss {
-      position: absolute; top: 16px; right: 16px;
+    .cam-mode-btn {
       width: 28px; height: 28px;
       display: flex; align-items: center; justify-content: center;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 14px; color: var(--text-muted);
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      color: var(--text-secondary);
       cursor: pointer;
-      background: transparent;
-      font-family: var(--font-mono);
-      transition: all var(--transition);
-      z-index: 1;
+      font-size: 13px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(4px);
     }
-    .intervention-dismiss:hover {
-      border-color: var(--text-secondary);
+    .cam-mode-btn.active {
+      background: rgba(41, 151, 255, 0.2);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .cam-mode-btn:hover:not(.active) {
+      border-color: rgba(255, 255, 255, 0.25);
       color: var(--text-primary);
     }
+
+    /* Minimized PiP */
+    .video-container.cam-minimized {
+      position: fixed !important;
+      width: 160px !important; height: 120px !important;
+      bottom: 80px; right: 20px;
+      top: auto !important; left: auto !important;
+      flex: none !important;
+      z-index: 100;
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      cursor: move;
+      transition: width 0.3s ease, height 0.3s ease;
+    }
+    .video-container.cam-minimized .cam-mode-btn { width: 22px; height: 22px; font-size: 11px; }
+
+    /* Fullscreen ghost */
+    .video-container.cam-fullscreen {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important; height: 100vh !important;
+      flex: none !important;
+      z-index: 5;
+      background: transparent;
+      transition: all 0.3s ease;
+    }
+    .video-container.cam-fullscreen #video-feed,
+    .video-container.cam-fullscreen #face-overlay-canvas { opacity: 0.12; }
+    .video-container.cam-fullscreen .cam-mode-toggle { z-index: 15; bottom: 20px; right: 20px; }
+    .video-container.cam-fullscreen .cam-mode-btn   { background: rgba(0, 0, 0, 0.75); }
+
+    /* =============================================
+       SESSION CONTROL FOOTER
+    ============================================= */
+    .center-footer {
+      flex-shrink: 0;
+      padding: 20px 24px;
+      display: flex;
+      justify-content: center;
+      background: var(--bg-void);
+      border-top: 1px solid var(--border);
+    }
+    .session-pill-btn {
+      height: 48px;
+      padding: 0 56px;
+      min-width: 200px;
+      border-radius: 24px;
+      font-family: var(--font-display);
+      font-size: 15px; font-weight: 500;
+      letter-spacing: -0.01em;
+      background: rgba(255, 69, 58, 0.12);
+      color: var(--red);
+      border: 1px solid rgba(255, 69, 58, 0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .session-pill-btn:hover {
+      background: rgba(255, 69, 58, 0.22);
+      border-color: var(--red);
+    }
+
+    /* =============================================
+       STATUS ORB (replaces all alerts / toasts / modals)
+    ============================================= */
+    #status-orb {
+      position: fixed;
+      top: 21px; left: 7px;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      z-index: 600;
+      cursor: pointer;
+      background: #2997ff;
+      box-shadow: 0 0 6px rgba(41, 151, 255, 0.45);
+      transition: background-color 1.7s ease, box-shadow 1.7s ease;
+    }
+    #status-orb.orb-blue   { background: #2997ff; box-shadow: 0 0 6px rgba(41, 151, 255, 0.45); }
+    #status-orb.orb-green  { background: #30d158; box-shadow: 0 0 6px rgba(48, 209, 88, 0.45);  }
+    #status-orb.orb-yellow { background: #ffd60a; box-shadow: 0 0 6px rgba(255, 214, 10, 0.45); }
+    #status-orb.orb-orange { background: #ff9f0a; box-shadow: 0 0 6px rgba(255, 159, 10, 0.45); }
+    #status-orb.orb-red    { background: #ff453a; box-shadow: 0 0 6px rgba(255, 69, 58, 0.45);  }
+
+    .orb-card {
+      position: fixed;
+      top: 44px; left: 4px;
+      width: 210px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      z-index: 601;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+    .orb-card.hidden { display: none; }
+    .orb-card-label {
+      font-size: 11px; font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      padding-right: 24px;
+      letter-spacing: 0.04em;
+    }
+    .orb-card-desc {
+      font-size: 11px; line-height: 1.5;
+      color: var(--text-secondary);
+    }
+    .orb-card-dismiss {
+      position: absolute; top: 8px; right: 8px;
+      width: 20px; height: 20px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none;
+      color: var(--text-muted); cursor: pointer;
+      font-size: 16px; line-height: 1;
+      border-radius: 4px;
+      transition: color var(--transition);
+    }
+    .orb-card-dismiss:hover { color: var(--text-primary); }
 
     /* =============================================
        EVENT LOG (right panel)
@@ -1140,12 +1117,391 @@
       background-size: 800px 100%;
       animation: shimmer 1.5s infinite;
     }
+
+    /* =============================================
+       SYSTEM STATUS DOT
+    ============================================= */
+    .system-status-dot {
+      position: relative;
+      display: flex; align-items: center; gap: 6px;
+      cursor: default;
+    }
+    .ssd-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: background 300ms ease, box-shadow 300ms ease;
+    }
+    .system-status-dot.status-nominal .ssd-dot {
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(0,255,136,0.7);
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+    .system-status-dot.status-warning .ssd-dot {
+      background: var(--amber);
+      box-shadow: 0 0 8px rgba(255,183,0,0.7);
+      animation: pulseDot 1s ease-in-out infinite;
+    }
+    .system-status-dot.status-error .ssd-dot {
+      background: var(--red);
+      box-shadow: 0 0 8px rgba(255,61,90,0.7);
+      animation: pulseDot 0.7s ease-in-out infinite;
+    }
+    .ssd-tooltip {
+      display: none;
+      position: absolute; top: calc(100% + 10px); right: 0;
+      padding: 6px 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 11px; color: var(--text-secondary);
+      white-space: nowrap; z-index: 1000;
+      pointer-events: none;
+    }
+    .system-status-dot:hover .ssd-tooltip { display: block; }
+
+    /* =============================================
+       SETTINGS PANEL
+    ============================================= */
+    .settings-panel {
+      position: relative;
+    }
+    .settings-toggle-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-family: var(--font-mono); font-size: 11px;
+      cursor: pointer; transition: all var(--transition);
+      letter-spacing: 0.06em;
+    }
+    .settings-toggle-btn:hover {
+      border-color: var(--border-bright);
+      color: var(--text-primary);
+    }
+    .settings-toggle-btn[aria-expanded="true"] {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: var(--cyan-dim);
+    }
+
+    .settings-content {
+      display: none;
+      position: absolute; top: calc(100% + 8px); right: 0;
+      width: 280px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      padding: 18px;
+      z-index: 500;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6), 0 0 0 1px var(--border);
+      flex-direction: column; gap: 14px;
+    }
+    .settings-content.expanded { display: flex; }
+
+    .settings-section-label {
+      font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    /* Mode switch row */
+    .mode-switch-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .mode-switch-label-text {
+      font-size: 12px; color: var(--text-muted); flex: 1; transition: color var(--transition);
+    }
+    .mode-switch-label-text.active { color: var(--text-primary); font-weight: 600; }
+
+    .mode-switch {
+      position: relative; width: 52px; height: 28px; flex-shrink: 0;
+    }
+    .mode-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .mode-switch-slider {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .mode-switch-slider::before {
+      content: '';
+      position: absolute; top: 4px; left: 4px;
+      width: 18px; height: 18px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: all var(--transition);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .mode-switch input:checked + .mode-switch-slider {
+      background: var(--cyan-dim);
+      border-color: var(--cyan);
+    }
+    .mode-switch input:checked + .mode-switch-slider::before {
+      transform: translateX(24px);
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan-glow);
+    }
+
+    .settings-mode-desc {
+      font-size: 10px; color: var(--text-muted); line-height: 1.6; margin-top: 2px;
+    }
+
+    /* Demo mode switch (profile screen) */
+    .demo-switch-row {
+      display: inline-flex; align-items: center; gap: 12px;
+      padding: 10px 20px;
+      background: var(--bg-panel);
+      border: 1px solid rgba(255,183,0,0.3);
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+    .demo-switch-label {
+      font-size: 13px; color: var(--amber); font-family: var(--font-mono); letter-spacing: 0.04em;
+    }
+    .demo-switch {
+      position: relative; width: 52px; height: 28px; flex-shrink: 0;
+    }
+    .demo-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .demo-switch-slider {
+      position: absolute; inset: 0;
+      background: rgba(255,183,0,0.06);
+      border: 1px solid rgba(255,183,0,0.25);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .demo-switch-slider::before {
+      content: '';
+      position: absolute; top: 4px; left: 4px;
+      width: 18px; height: 18px;
+      background: rgba(255,183,0,0.4);
+      border-radius: 50%;
+      transition: all var(--transition);
+    }
+    .demo-switch input:checked + .demo-switch-slider {
+      background: rgba(255,183,0,0.15);
+      border-color: var(--amber);
+    }
+    .demo-switch input:checked + .demo-switch-slider::before {
+      transform: translateX(24px);
+      background: var(--amber);
+      box-shadow: 0 0 8px rgba(255,183,0,0.6);
+    }
+
+    /* =============================================
+       SIMPLE MODE LAYOUT
+    ============================================= */
+    body.mode-simple .dash-left   { display: none; }
+    body.mode-simple .dash-right  { display: none; }
+    body.mode-simple .dash-body   { grid-template-columns: 1fr; }
+    body.mode-simple .scores-section  { display: none; }
+    body.mode-simple #face-overlay-canvas { opacity: 0; pointer-events: none; }
+    body.mode-simple .video-bracket    { display: none; }
+    body.mode-simple .video-status-badge { display: none; }
+    body.mode-simple #gaze-dot { display: none !important; }
+
+    /* =============================================
+       QUESTION CARD — LARGE TEXT HERO
+    ============================================= */
+    .question-card {
+      padding: 40px 48px !important;
+      gap: 20px !important;
+      background: var(--bg-card) !important;
+    }
+    .question-card-text {
+      font-size: 2.2rem !important;
+      font-weight: 600 !important;
+      line-height: 1.3 !important;
+      color: var(--text-primary) !important;
+      letter-spacing: -0.01em !important;
+    }
+    @media (max-width: 768px) {
+      .question-card { padding: 24px !important; }
+      .question-card-text { font-size: 1.5rem !important; }
+    }
+
+    /* =============================================
+       MODE TOGGLE PILL (topbar, always visible)
+    ============================================= */
+    .mode-toggle-pill {
+      display: flex; align-items: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .mode-pill-btn {
+      padding: 5px 14px;
+      border-radius: 16px;
+      border: none;
+      font-family: var(--font-display); font-size: 12px; font-weight: 500;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: all var(--transition);
+      background: transparent;
+      color: var(--text-secondary);
+      min-height: 28px;
+      white-space: nowrap;
+    }
+    .mode-pill-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 1px 8px rgba(41, 151, 255, 0.4);
+    }
+    .mode-pill-btn:hover:not(.active) {
+      color: var(--text-primary);
+    }
+
+    /* =============================================
+       SENSOR DOTS (4 dedicated status indicators)
+    ============================================= */
+    .sensor-dots {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .sensor-dot {
+      position: relative;
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: default;
+    }
+    .sensor-dot-indicator {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: background 300ms ease, box-shadow 300ms ease;
+    }
+    .sensor-dot.inactive .sensor-dot-indicator {
+      background: var(--text-muted);
+    }
+    .sensor-dot.nominal .sensor-dot-indicator {
+      background: var(--green);
+      box-shadow: 0 0 6px rgba(48, 209, 88, 0.6);
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+    .sensor-dot.active .sensor-dot-indicator {
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent-glow);
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+    .sensor-dot.warning .sensor-dot-indicator {
+      background: var(--amber);
+      box-shadow: 0 0 6px rgba(245, 166, 35, 0.6);
+      animation: pulseDot 1s ease-in-out infinite;
+    }
+    .sensor-dot.error .sensor-dot-indicator {
+      background: var(--red);
+      box-shadow: 0 0 6px rgba(255, 69, 58, 0.6);
+      animation: pulseDot 0.7s ease-in-out infinite;
+    }
+    .sensor-dot-tooltip {
+      display: none;
+      position: absolute; top: calc(100% + 8px); left: 50%;
+      transform: translateX(-50%);
+      padding: 5px 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-sm);
+      font-size: 11px; color: var(--text-secondary);
+      white-space: nowrap; z-index: 1000;
+      pointer-events: none;
+      font-family: var(--font-display);
+    }
+    .sensor-dot:hover .sensor-dot-tooltip { display: block; }
+
+    /* =============================================
+       PROFILE SELECTOR — PILL SEGMENTED CONTROL
+    ============================================= */
+    .profile-selector {
+      display: flex;
+      gap: 0;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 4px;
+    }
+    .profile-selector .profile-card {
+      flex: 1;
+      padding: 18px 28px;
+      min-width: 140px;
+      max-width: none;
+      width: auto;
+      border-radius: 14px;
+      border: 1px solid transparent !important;
+      background: transparent;
+      text-align: center;
+      box-shadow: none !important;
+    }
+    .profile-selector .profile-card:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: transparent !important;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+    .profile-selector .profile-card::before,
+    .profile-selector .profile-card::after { display: none !important; }
+    .profile-selector .profile-card h3  { font-size: 18px; margin-bottom: 2px; }
+    .profile-selector .profile-card p   { font-size: 11px; color: var(--text-muted); margin-bottom: 0; line-height: 1.3; }
+
+    /* Topbar cleaner */
+    .topbar {
+      background: rgba(10, 10, 10, 0.94) !important;
+      backdrop-filter: blur(24px) !important;
+    }
+
+    /* Boot screen: clean up the gradient bar */
+    .boot-progress-bar {
+      background: var(--accent) !important;
+      box-shadow: none !important;
+    }
+    /* Boot logo: use accent color */
+    .boot-logo-inner {
+      color: var(--accent) !important;
+      text-shadow: none !important;
+    }
+
+    /* Topbar profile chip: accent color */
+    .topbar-profile-chip {
+      background: var(--accent-dim) !important;
+      border-color: rgba(41, 151, 255, 0.2) !important;
+      color: var(--accent) !important;
+    }
+    .topbar-profile-chip-dot {
+      background: var(--accent) !important;
+      box-shadow: none !important;
+    }
+
+    /* Summary grade badge */
+    .summary-grade-badge {
+      background: var(--accent-dim) !important;
+      border-color: rgba(41, 151, 255, 0.25) !important;
+    }
+    .summary-grade-letter { color: var(--accent) !important; }
+    .summary-stat-value   { color: var(--accent) !important; }
+
+    /* Buttons */
+    .btn-primary {
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+    }
+    .btn-primary:hover { box-shadow: 0 0 20px var(--accent-glow) !important; }
+
+    /* Apple cleanup: remove all neon glows from metrics */
+    .metric-card-value { text-shadow: none !important; }
+    .metric-bar-fill   { box-shadow: none !important; }
+
+    /* Ensure interactive buttons meet 44px tap target */
+    .mode-pill-btn     { min-height: 44px !important; }
+    .session-pill-btn  { min-height: 48px !important; }
   </style>
 </head>
 <body>
-
-  <!-- Scanlines overlay -->
-  <div class="scanlines"></div>
 
   <!-- ==========================================
        SCREEN 1: LOADING / BOOT
@@ -1154,14 +1510,14 @@
     <div class="boot-logo">
       <div class="boot-logo-mark">
         <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="40" cy="40" r="36" stroke="rgba(0,229,255,0.2)" stroke-width="1.5"/>
+          <circle cx="40" cy="40" r="36" stroke="rgba(41,151,255,0.15)" stroke-width="1.5"/>
           <circle cx="40" cy="40" r="36" stroke="url(#bootGrad)" stroke-width="1.5"
             stroke-dasharray="60 166" stroke-linecap="round"/>
-          <circle cx="40" cy="40" r="28" stroke="rgba(0,229,255,0.08)" stroke-width="1"/>
+          <circle cx="40" cy="40" r="28" stroke="rgba(41,151,255,0.07)" stroke-width="1"/>
           <defs>
             <linearGradient id="bootGrad" x1="0" y1="0" x2="80" y2="80" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#00e5ff"/>
-              <stop offset="100%" stop-color="#a855f7"/>
+              <stop offset="0%" stop-color="#2997ff"/>
+              <stop offset="100%" stop-color="#bf5af2"/>
             </linearGradient>
           </defs>
         </svg>
@@ -1220,58 +1576,36 @@
     <div style="text-align:center;margin-bottom:20px;">
       <input id="api-key-input" type="password"
              placeholder="Claude API Key (optional — enables AI responses)"
-             style="background:#0c1425;border:1px solid rgba(0,229,255,0.25);color:#e8f4ff;
-                    padding:12px 18px;border-radius:8px;font-size:14px;width:360px;
+             style="background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);color:#f5f5f7;
+                    padding:12px 18px;border-radius:10px;font-size:14px;width:360px;
                     outline:none;font-family:inherit;letter-spacing:0.02em;" />
     </div>
 
     <div style="text-align:center;margin-bottom:28px;">
-      <label style="display:inline-flex;align-items:center;gap:10px;cursor:pointer;
-                    background:#0c1425;border:1px solid rgba(255,183,0,0.3);
-                    padding:8px 18px;border-radius:8px;font-size:13px;color:#ffb700;font-family:var(--font-mono);">
-        <input type="checkbox" id="demo-mode-toggle" style="accent-color:#ffb700;width:16px;height:16px;">
-        ⚡ DEMO MODE — fast calibration, short cooldowns
+      <label class="demo-switch-row">
+        <span class="demo-switch-label">⚡ Demo Mode — fast calibration, short cooldowns</span>
+        <span class="demo-switch">
+          <input type="checkbox" id="demo-mode-toggle">
+          <span class="demo-switch-slider"></span>
+        </span>
       </label>
     </div>
 
-    <div class="profile-grid">
+    <div class="profile-selector">
       <div class="profile-card" data-id="adhd">
         <div class="profile-card-tag">Attention</div>
         <h3>ADHD</h3>
-        <p>High-energy, dynamic interventions. Frequent micro-breaks, gamification cues, and engagement spikes to maintain focus.</p>
-        <div class="profile-card-traits">
-          <span class="profile-trait">Short bursts</span>
-          <span class="profile-trait">High stimulation</span>
-          <span class="profile-trait">Reward loops</span>
-          <span class="profile-trait">Movement cues</span>
-        </div>
-        <div class="profile-card-arrow">→</div>
+        <p>Focus &amp; engagement</p>
       </div>
-
       <div class="profile-card" data-id="anxiety">
         <div class="profile-card-tag">Regulation</div>
         <h3>Anxiety</h3>
-        <p>Calm, predictable pacing. Breathing prompts, reduced visual noise, and reassuring check-ins during high-stress signals.</p>
-        <div class="profile-card-traits">
-          <span class="profile-trait">Gentle pace</span>
-          <span class="profile-trait">Breathing cues</span>
-          <span class="profile-trait">Low stimulation</span>
-          <span class="profile-trait">Safe spaces</span>
-        </div>
-        <div class="profile-card-arrow">→</div>
+        <p>Calm &amp; clarity</p>
       </div>
-
       <div class="profile-card" data-id="asd">
         <div class="profile-card-tag">Structure</div>
         <h3>ASD</h3>
-        <p>Consistent structure with clear transitions. Routine reinforcement, predictable layouts, and explicit progress markers.</p>
-        <div class="profile-card-traits">
-          <span class="profile-trait">Routine</span>
-          <span class="profile-trait">Explicit cues</span>
-          <span class="profile-trait">Clear structure</span>
-          <span class="profile-trait">Predictability</span>
-        </div>
-        <div class="profile-card-arrow">→</div>
+        <p>Order &amp; progress</p>
       </div>
     </div>
   </div>
@@ -1320,15 +1654,15 @@
         <div class="topbar-logo">
           <div class="topbar-logo-mark">
             <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="16" cy="16" r="14" stroke="rgba(0,229,255,0.3)" stroke-width="1"/>
+              <circle cx="16" cy="16" r="14" stroke="rgba(41,151,255,0.25)" stroke-width="1"/>
               <circle cx="16" cy="16" r="14" stroke="url(#tbGrad)" stroke-width="1.5"
                 stroke-dasharray="24 64" stroke-linecap="round"/>
-              <text x="16" y="20" text-anchor="middle" fill="#00e5ff"
-                font-family="Syne,sans-serif" font-size="10" font-weight="800">AQ</text>
+              <text x="16" y="20" text-anchor="middle" fill="#2997ff"
+                font-family="Inter,sans-serif" font-size="10" font-weight="700">AQ</text>
               <defs>
                 <linearGradient id="tbGrad" x1="0" y1="0" x2="32" y2="32">
-                  <stop offset="0%" stop-color="#00e5ff"/>
-                  <stop offset="100%" stop-color="#a855f7"/>
+                  <stop offset="0%" stop-color="#2997ff"/>
+                  <stop offset="100%" stop-color="#bf5af2"/>
                 </linearGradient>
               </defs>
             </svg>
@@ -1354,7 +1688,37 @@
           <div class="pulse-dot"></div>
           <span>Monitoring</span>
         </div>
-        <button class="topbar-btn end-session" id="btn-end-session">End Session</button>
+
+        <!-- 4 sensor status dots: camera · mic · AI · system -->
+        <div class="sensor-dots">
+          <div class="sensor-dot inactive" id="status-dot-camera">
+            <span class="sensor-dot-indicator"></span>
+            <span class="sensor-dot-tooltip">Camera inactive</span>
+          </div>
+          <div class="sensor-dot inactive" id="status-dot-mic">
+            <span class="sensor-dot-indicator"></span>
+            <span class="sensor-dot-tooltip">Microphone inactive</span>
+          </div>
+          <div class="sensor-dot inactive" id="status-dot-ai">
+            <span class="sensor-dot-indicator"></span>
+            <span class="sensor-dot-tooltip">AI offline — enter API key</span>
+          </div>
+          <div class="sensor-dot nominal" id="status-dot-system">
+            <span class="sensor-dot-indicator"></span>
+            <span class="sensor-dot-tooltip">All systems nominal</span>
+          </div>
+        </div>
+
+        <!-- Mode toggle pill (always visible) -->
+        <div class="mode-toggle-pill">
+          <button class="mode-pill-btn active" id="mode-btn-simple">Simple</button>
+          <button class="mode-pill-btn" id="mode-btn-technical">Technical</button>
+        </div>
+
+        <!-- Legacy hidden elements for backward-compat JS -->
+        <input type="checkbox" id="mode-toggle" style="display:none">
+        <span id="mode-label-simple" style="display:none">Simple</span>
+        <span id="mode-label-technical" style="display:none">Technical</span>
       </div>
     </div>
 
@@ -1482,21 +1846,21 @@
         </div>
 
         <!-- Video feed -->
-        <div class="video-container">
+        <div class="video-container" id="video-container">
           <video id="video-feed" autoplay muted playsinline></video>
           <canvas id="face-overlay-canvas"></canvas>
 
-          <div class="video-bracket tl"></div>
-          <div class="video-bracket tr"></div>
-          <div class="video-bracket bl"></div>
-          <div class="video-bracket br"></div>
-
-          <div class="video-status-badge">
-            <div class="status-pill active" id="video-status">
-              <div class="pulse-dot"></div>
-              <span>Face Detected</span>
-            </div>
+          <!-- Camera view mode toggle -->
+          <div class="cam-mode-toggle">
+            <button class="cam-mode-btn active" id="cam-btn-default" title="Default">⬡</button>
+            <button class="cam-mode-btn" id="cam-btn-minimized" title="Minimized PiP">⊡</button>
+            <button class="cam-mode-btn" id="cam-btn-fullscreen" title="Fullscreen Ghost">⬚</button>
           </div>
+        </div>
+
+        <!-- Session control -->
+        <div class="center-footer">
+          <button class="session-pill-btn" id="btn-end-session">End Session</button>
         </div>
       </div>
 
@@ -1558,15 +1922,6 @@
           <div class="metric-bar"><div class="metric-bar-fill" id="bar-pvs" style="--metric-color:var(--green); --metric-color-alt:var(--cyan); --metric-glow:rgba(0,255,136,0.4); width:0%;"></div></div>
         </div>
 
-        <div class="panel-section-label" style="margin-top: 4px;">Event Log</div>
-
-        <div class="event-log" id="event-log">
-          <div class="event-log-item">
-            <div class="event-log-dot info"></div>
-            <div class="event-log-text"><strong>System ready.</strong> Monitoring active.</div>
-            <div class="event-log-time">00:00</div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -1626,23 +1981,15 @@
        OVERLAYS (always in DOM)
   =========================================== -->
 
-  <!-- Gaze dot -->
+  <!-- Gaze dot (technical mode only) -->
   <div id="gaze-dot"></div>
 
-  <!-- Flag toasts -->
-  <div id="flag-overlay"></div>
-
-  <!-- Intervention overlay -->
-  <div id="intervention-overlay">
-    <div class="intervention-card" id="intervention-card">
-      <button class="intervention-dismiss" id="intervention-dismiss">✕</button>
-      <div class="intervention-eyebrow" id="intervention-eyebrow">Adaptive Intervention</div>
-      <div class="intervention-title" id="intervention-title">Taking a moment</div>
-      <div class="intervention-content" id="intervention-content"></div>
-      <div class="intervention-progress">
-        <div class="intervention-progress-bar" id="intervention-progress-bar"></div>
-      </div>
-    </div>
+  <!-- Status orb + detail card -->
+  <div id="status-orb" class="orb-blue" title="Nominal"></div>
+  <div id="orb-card" class="orb-card hidden">
+    <button class="orb-card-dismiss" id="orb-card-dismiss">×</button>
+    <div class="orb-card-label" id="orb-card-label">Nominal</div>
+    <div class="orb-card-desc" id="orb-card-desc">All systems running normally.</div>
   </div>
 
   <!-- ==========================================
@@ -3021,7 +3368,7 @@ window.BrainManager = {
               ? 'Camera/microphone access denied. AdaptIQ needs these to function.'
               : 'Sensor initialization failed. Please refresh and try again.';
             if (window.AdaptIQ_UI) {
-              window.AdaptIQ_UI.addEventLog('error', `<strong>Error:</strong> ${errMsg}`);
+              window.AdaptIQ_UI.updateSystemStatus('error', errMsg);
             }
             Bus.emit('calibration:complete', { type: 'gaze' }); // advance UI so user is not stuck
           }

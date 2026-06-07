@@ -29,10 +29,13 @@ window.AdaptIQ_UI = (() => {
     flags: [],
     flagTimers: [],
     intervention: { active: false, timer: null, progressTimer: null },
+    orb: { severity: 'blue', lastUpdate: 0, hideTimer: null },
     eventLog: [],
     charts: {},
     sparkBuffers: { gds: [], hpd: [], ves: [], ces: [], silr: [] },
     maxSparkPoints: 40,
+    mode: 'simple',
+    gazeLastRenderTime: 0,
   };
 
   // ============================================================
@@ -339,9 +342,6 @@ window.AdaptIQ_UI = (() => {
   function endSession() {
     clearInterval(state.sessionTimerInterval);
     clearInterval(state.engagementTimerInterval);
-    if (state.intervention.timer) clearTimeout(state.intervention.timer);
-    if (state.intervention.progressTimer) clearInterval(state.intervention.progressTimer);
-    hideIntervention();
 
     // Build summary from current scores
     showSummary({
@@ -366,6 +366,78 @@ window.AdaptIQ_UI = (() => {
       Bus.emit('session:end', {});
       endSession();
     });
+
+    // Mode toggle pill buttons
+    const btnSimple = document.getElementById('mode-btn-simple');
+    const btnTech   = document.getElementById('mode-btn-technical');
+    if (btnSimple) btnSimple.addEventListener('click', () => setMode('simple'));
+    if (btnTech)   btnTech.addEventListener('click',   () => setMode('technical'));
+
+    // Legacy checkbox (hidden, kept for backward compat)
+    const modeToggle = document.getElementById('mode-toggle');
+    if (modeToggle) {
+      modeToggle.addEventListener('change', (e) => {
+        setMode(e.target.checked ? 'technical' : 'simple');
+      });
+    }
+
+    // Reflect API key in AI sensor dot
+    const apiKeyInput = document.getElementById('api-key-input');
+    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+    updateSensorDot('ai', apiKey ? 'active' : 'inactive',
+      apiKey ? 'AI ready' : 'AI offline — enter API key');
+
+    initCameraViewModes();
+    setMode('simple');
+  }
+
+  // ============================================================
+  // CAMERA VIEW MODES
+  // ============================================================
+  function initCameraViewModes() {
+    const container     = document.getElementById('video-container');
+    const btnDefault    = document.getElementById('cam-btn-default');
+    const btnMinimized  = document.getElementById('cam-btn-minimized');
+    const btnFullscreen = document.getElementById('cam-btn-fullscreen');
+    if (!container || !btnDefault) return;
+
+    function setViewMode(mode) {
+      container.className = 'video-container' + (mode === 'default' ? '' : ' cam-' + mode);
+      [btnDefault, btnMinimized, btnFullscreen].forEach(b => b && b.classList.remove('active'));
+      const activeBtn = { default: btnDefault, minimized: btnMinimized, fullscreen: btnFullscreen }[mode];
+      if (activeBtn) activeBtn.classList.add('active');
+
+      if (mode !== 'minimized') {
+        container.style.cssText = '';
+      }
+    }
+
+    btnDefault    && btnDefault.addEventListener('click',    () => setViewMode('default'));
+    btnMinimized  && btnMinimized.addEventListener('click',  () => setViewMode('minimized'));
+    btnFullscreen && btnFullscreen.addEventListener('click', () => setViewMode('fullscreen'));
+
+    // Drag for minimized PiP
+    let dragging = false, dragOffX = 0, dragOffY = 0;
+
+    container.addEventListener('mousedown', (e) => {
+      if (!container.classList.contains('cam-minimized')) return;
+      if (e.target.closest('.cam-mode-toggle')) return;
+      dragging = true;
+      const rect = container.getBoundingClientRect();
+      dragOffX = e.clientX - rect.left;
+      dragOffY = e.clientY - rect.top;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      container.style.left   = (e.clientX - dragOffX) + 'px';
+      container.style.top    = (e.clientY - dragOffY) + 'px';
+      container.style.right  = 'auto';
+      container.style.bottom = 'auto';
+    });
+
+    document.addEventListener('mouseup', () => { dragging = false; });
   }
 
   // ============================================================
@@ -381,20 +453,25 @@ window.AdaptIQ_UI = (() => {
       navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false })
         .then(stream => {
           video.srcObject = stream;
+          updateSensorDot('camera', 'nominal', 'Camera active');
         })
         .catch(err => {
           console.warn('[AdaptIQ UI] Camera access denied:', err);
           updateVideoStatus(false);
+          updateSensorDot('camera', 'error', 'Camera denied');
+          updateSystemStatus('error', 'Camera access denied — please allow camera permission');
+          updateOrb('red', 'Camera Denied', 'Allow camera access in browser settings.');
         });
+    } else {
+      updateSensorDot('camera', 'nominal', 'Camera active');
     }
   }
 
   function updateVideoStatus(detected) {
-    const el = document.getElementById('video-status');
-    if (!el) return;
     state.faceDetected = detected;
-    el.className = `status-pill ${detected ? 'active' : 'warn'}`;
-    el.innerHTML = `<div class="pulse-dot"></div><span>${detected ? 'Face Detected' : 'No Face'}</span>`;
+    updateSensorDot('camera', detected ? 'active' : 'warning',
+      detected ? 'Camera — face detected' : 'Camera — no face');
+    if (!detected) updateOrb('yellow', 'No Face', 'Move closer or adjust lighting.');
   }
 
   // ============================================================
@@ -411,6 +488,7 @@ window.AdaptIQ_UI = (() => {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    if (state.mode !== 'technical') return;
     if (!data || !data.bbox) return;
 
     const { x, y, width, height } = data.bbox;
@@ -695,140 +773,106 @@ window.AdaptIQ_UI = (() => {
       setBarWidth('bar-osr', data.osr);
     }
 
-    // Move gaze dot
-    const dot = document.getElementById('gaze-dot');
-    if (dot && data.x !== undefined && data.y !== undefined) {
-      dot.style.display = 'block';
-      dot.style.left = `${data.x}px`;
-      dot.style.top  = `${data.y}px`;
+    // Gaze dot: Technical Mode only, capped at 10fps
+    if (state.mode === 'technical') {
+      const now = Date.now();
+      if (now - state.gazeLastRenderTime >= 100) {
+        state.gazeLastRenderTime = now;
+        const dot = document.getElementById('gaze-dot');
+        if (dot && data.x !== undefined && data.y !== undefined) {
+          dot.style.display = 'block';
+          dot.style.left = `${data.x}px`;
+          dot.style.top  = `${data.y}px`;
+        }
+      }
     }
   }
 
   // ============================================================
-  // FLAGS / ALERTS
+  // STATUS ORB
   // ============================================================
+
+  const ORB_SEVERITY = { blue: 0, green: 1, yellow: 2, orange: 3, red: 4 };
+  const ORB_RATE_MS  = 5000;
+
+  function updateOrb(severity, label, desc) {
+    const now = Date.now();
+    // Rate-limit: only update if ≥5s since last update OR incoming severity is higher
+    const cur = state.orb.severity;
+    const isHigher = (ORB_SEVERITY[severity] || 0) > (ORB_SEVERITY[cur] || 0);
+    if (!isHigher && now - state.orb.lastUpdate < ORB_RATE_MS) return;
+
+    state.orb.severity  = severity;
+    state.orb.lastUpdate = now;
+
+    const orb = document.getElementById('status-orb');
+    if (orb) {
+      orb.className = `orb-${severity}`;
+    }
+
+    // Update card contents (but don't auto-show the card)
+    const labelEl = document.getElementById('orb-card-label');
+    const descEl  = document.getElementById('orb-card-desc');
+    if (labelEl) labelEl.textContent = label || severity;
+    if (descEl)  descEl.textContent  = desc  || '';
+
+    // Auto-return to blue (nominal) after 12s if not red
+    if (state.orb.hideTimer) clearTimeout(state.orb.hideTimer);
+    if (severity !== 'red') {
+      state.orb.hideTimer = setTimeout(() => {
+        state.orb.severity = 'blue';
+        const o = document.getElementById('status-orb');
+        if (o) o.className = 'orb-blue';
+      }, 12000);
+    }
+
+    console.log(`[AdaptIQ Orb:${severity.toUpperCase()}]`, label, desc || '');
+  }
+
+  function initOrbClickHandler() {
+    const orb  = document.getElementById('status-orb');
+    const card = document.getElementById('orb-card');
+    const dismissBtn = document.getElementById('orb-card-dismiss');
+
+    if (!orb || !card) return;
+
+    orb.addEventListener('click', (e) => {
+      e.stopPropagation();
+      card.classList.toggle('hidden');
+    });
+
+    dismissBtn && dismissBtn.addEventListener('click', () => {
+      card.classList.add('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!card.classList.contains('hidden') && !card.contains(e.target) && e.target !== orb) {
+        card.classList.add('hidden');
+      }
+    });
+  }
+
+  // Legacy no-ops kept for any external callers
+  function hideIntervention() {}
   function handleFlag(data) {
     if (!data) return;
-    const { type, severity = 'low', timestamp, message } = data;
-
-    addEventLog('flag', `<strong>[${severity.toUpperCase()}]</strong> ${message || type}`);
-
-    const overlay = document.getElementById('flag-overlay');
-    if (!overlay) return;
-
-    const icons = { high: '⚠', medium: '◈', low: '◉' };
-    const toast = document.createElement('div');
-    toast.className = `flag-toast severity-${severity}`;
-    toast.innerHTML = `
-      <div class="flag-icon">${icons[severity] || '◉'}</div>
-      <div class="flag-content">
-        <div class="flag-type">${type || 'Alert'}</div>
-        <div class="flag-message">${message || ''}</div>
-      </div>
-    `;
-    overlay.appendChild(toast);
-
-    // Auto-remove after 4s
-    const timer = setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(-8px)';
-      toast.style.transition = 'all 300ms ease';
-      setTimeout(() => toast.remove(), 300);
-    }, 4000);
-    state.flagTimers.push(timer);
-
-    // Keep max 3 visible
-    const toasts = overlay.querySelectorAll('.flag-toast');
-    if (toasts.length > 3) toasts[0].remove();
+    const { type, severity = 'low', message } = data;
+    const orbSev = severity === 'high' ? 'red' : severity === 'medium' ? 'orange' : 'yellow';
+    updateOrb(orbSev, type || 'Alert', message || '');
   }
-
-  // ============================================================
-  // INTERVENTION OVERLAY
-  // ============================================================
   function handleIntervention(data) {
     if (!data) return;
-    const { action, message, color, duration, profile, chunk, done } = data;
-
-    addEventLog('intervention', `<strong>Intervention:</strong> ${action || 'adaptive break'}`);
-
-    // If streaming chunks, accumulate
-    if (chunk !== undefined) {
-      const content = document.getElementById('intervention-content');
-      if (content) {
-        if (chunk === 0 || !state.intervention.active) {
-          content.textContent = '';
-        }
-        content.textContent += chunk || '';
-      }
-      if (!state.intervention.active) {
-        showIntervention(action, color, duration);
-      }
-      if (done) {
-        // Stream complete — start dismiss timer
-        scheduleInterventionDismiss(duration || 8000);
-      }
-      return;
-    }
-
-    // Non-streamed: show full message
-    const content = document.getElementById('intervention-content');
-    if (content) content.textContent = message || '';
-    showIntervention(action, color, duration);
-    scheduleInterventionDismiss(duration || 8000);
-  }
-
-  function showIntervention(action, color, duration) {
-    state.intervention.active = true;
-
-    const overlay = document.getElementById('intervention-overlay');
-    const card    = document.getElementById('intervention-card');
-    const title   = document.getElementById('intervention-title');
-    const eyebrow = document.getElementById('intervention-eyebrow');
-    const bar     = document.getElementById('intervention-progress-bar');
-
     const ACTION_LABELS = {
       claude_response: 'AI Coach',
-      banner:          'Alert',
+      banner:          'Attention',
       focus_object:    'Focus Exercise',
-      content_swap:    'Try This Instead',
+      content_swap:    'Try This',
       break_timer:     'Take a Break',
     };
-    if (title)   title.textContent   = ACTION_LABELS[action] || action || 'Adaptive Intervention';
-    if (eyebrow) eyebrow.textContent = `${(state.profile || 'adaptive').toUpperCase()} · Intervention`;
-
-    // Apply color theming
-    const c = color || '#00e5ff';
-    if (card) {
-      card.style.setProperty('--intervention-color', c);
-      card.style.setProperty('--intervention-glow', hexToRgba(c, 0.15));
-    }
-
-    if (bar) bar.style.width = '100%';
-    if (overlay) overlay.classList.add('active');
-  }
-
-  function scheduleInterventionDismiss(duration) {
-    const ms = typeof duration === 'number' ? duration : 8000;
-    const bar = document.getElementById('intervention-progress-bar');
-
-    if (bar) {
-      bar.style.transition = `width ${ms}ms linear`;
-      requestAnimationFrame(() => { bar.style.width = '0%'; });
-    }
-
-    if (state.intervention.timer) clearTimeout(state.intervention.timer);
-    state.intervention.timer = setTimeout(hideIntervention, ms);
-  }
-
-  function hideIntervention() {
-    const overlay = document.getElementById('intervention-overlay');
-    if (overlay) overlay.classList.remove('active');
-    state.intervention.active = false;
-  }
-
-  function initInterventionDismiss() {
-    const btn = document.getElementById('intervention-dismiss');
-    if (btn) btn.addEventListener('click', hideIntervention);
+    const label = ACTION_LABELS[data.action] || 'Intervention';
+    const desc  = (data.chunk !== undefined ? '' : data.message) || '';
+    updateOrb('orange', label, desc);
+    console.log('[AdaptIQ Intervention]', data.action || 'adaptive break');
   }
 
   // ============================================================
@@ -856,7 +900,7 @@ window.AdaptIQ_UI = (() => {
       if (barEl)   barEl.style.width = `${Math.min(100, val || 0)}%`;
     });
 
-    addEventLog('score', `Scores updated · Overall: <strong>${Math.round(overall)}%</strong> (${grade})`);
+    console.log(`[AdaptIQ Scores] Overall: ${Math.round(overall)}% (${grade})`);
   }
 
   // ============================================================
@@ -876,24 +920,11 @@ window.AdaptIQ_UI = (() => {
   }
 
   // ============================================================
-  // EVENT LOG
+  // EVENT LOG (dev-only — no longer rendered in the UI)
   // ============================================================
   function addEventLog(type, html) {
-    const container = document.getElementById('event-log');
-    if (!container) return;
-
-    const item = document.createElement('div');
-    item.className = 'event-log-item';
-    item.innerHTML = `
-      <div class="event-log-dot ${type}"></div>
-      <div class="event-log-text">${html}</div>
-      <div class="event-log-time">${formatTime()}</div>
-    `;
-    container.insertBefore(item, container.firstChild);
-
-    // Keep max 30 entries
-    const items = container.querySelectorAll('.event-log-item');
-    if (items.length > 30) items[items.length - 1].remove();
+    const plain = html.replace(/<[^>]+>/g, '');
+    console.log(`[AdaptIQ:${type}]`, plain);
   }
 
   // ============================================================
@@ -941,6 +972,65 @@ window.AdaptIQ_UI = (() => {
   }
 
   // ============================================================
+  // DISPLAY MODE
+  // ============================================================
+  function setMode(mode) {
+    state.mode = mode;
+    document.body.classList.toggle('mode-simple',    mode === 'simple');
+    document.body.classList.toggle('mode-technical', mode === 'technical');
+
+    // Hide gaze dot immediately when switching to simple
+    if (mode === 'simple') {
+      const dot = document.getElementById('gaze-dot');
+      if (dot) dot.style.display = 'none';
+    }
+
+    // Pill toggle buttons (new design)
+    const btnSimple = document.getElementById('mode-btn-simple');
+    const btnTech   = document.getElementById('mode-btn-technical');
+    if (btnSimple) btnSimple.classList.toggle('active', mode === 'simple');
+    if (btnTech)   btnTech.classList.toggle('active',   mode === 'technical');
+
+    // Legacy hidden checkbox
+    const modeToggle = document.getElementById('mode-toggle');
+    if (modeToggle) modeToggle.checked = (mode === 'technical');
+
+    // Legacy hidden label spans (kept for any external code)
+    const lblSimple    = document.getElementById('mode-label-simple');
+    const lblTechnical = document.getElementById('mode-label-technical');
+    if (lblSimple)    lblSimple.classList.toggle('active',    mode === 'simple');
+    if (lblTechnical) lblTechnical.classList.toggle('active', mode === 'technical');
+  }
+
+  // ============================================================
+  // SENSOR DOT UPDATES
+  // ============================================================
+  function updateSensorDot(id, dotState, message) {
+    // dotState: 'inactive' | 'nominal' | 'active' | 'warning' | 'error'
+    const dot = document.getElementById(`status-dot-${id}`);
+    if (!dot) return;
+    dot.className = `sensor-dot ${dotState}`;
+    const tooltip = dot.querySelector('.sensor-dot-tooltip');
+    if (tooltip && message) tooltip.textContent = message;
+  }
+
+  function updateSystemStatus(level, message) {
+    // Map to sensor dot on the new design
+    const stateMap = { nominal: 'nominal', warning: 'warning', error: 'error' };
+    const dotState = stateMap[level] || 'inactive';
+    const defaultMsg = level === 'nominal' ? 'All systems nominal'
+                     : level === 'warning' ? 'Warning — degraded state'
+                     : 'Error — check permissions';
+    updateSensorDot('system', dotState, message || defaultMsg);
+
+    // Backward compat: legacy status dot (may not exist in new HTML)
+    const dot     = document.getElementById('system-status-dot');
+    const tooltip = document.getElementById('ssd-tooltip-text');
+    if (dot) dot.className = `system-status-dot status-${level}`;
+    if (tooltip) tooltip.textContent = message || defaultMsg;
+  }
+
+  // ============================================================
   // BUS SUBSCRIPTIONS
   // ============================================================
   function attachBusListeners() {
@@ -959,6 +1049,24 @@ window.AdaptIQ_UI = (() => {
       if (data && data.summary) showSummary(data.summary);
       else endSession();
     });
+    Bus.on('session:debrief', ({ text }) => {
+      const insightsEl = document.getElementById('summary-insights');
+      if (insightsEl && text) insightsEl.textContent = text;
+    });
+
+    // Sensor dot wiring — camera handled via handleFaceSignal → updateVideoStatus
+    Bus.on('signal:audio', (data) => {
+      if (data && data.ves !== undefined) {
+        updateSensorDot('mic', 'active', 'Microphone active');
+      }
+    });
+    Bus.on('claude:ready', () => {
+      updateSensorDot('ai', 'active', 'AI ready');
+    });
+    Bus.on('claude:error', (err) => {
+      updateSensorDot('ai', 'error', err && err.message ? err.message : 'AI error');
+      updateOrb('red', 'AI Error', err && err.message ? err.message : 'Claude API error');
+    });
   }
 
   // ============================================================
@@ -967,10 +1075,10 @@ window.AdaptIQ_UI = (() => {
   function initKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (state.intervention.active) hideIntervention();
+        const card = document.getElementById('orb-card');
+        if (card && !card.classList.contains('hidden')) card.classList.add('hidden');
       }
-      if (e.key === 'g' && state.currentScreen === 'dashboard') {
-        // Toggle gaze dot visibility
+      if (e.key === 'g' && state.currentScreen === 'dashboard' && state.mode === 'technical') {
         const dot = document.getElementById('gaze-dot');
         if (dot) dot.style.display = dot.style.display === 'none' ? 'block' : 'none';
       }
@@ -983,7 +1091,7 @@ window.AdaptIQ_UI = (() => {
   function init() {
     attachBusListeners();
     initProfileScreen();
-    initInterventionDismiss();
+    initOrbClickHandler();
     initKeyboardShortcuts();
     runBootSequence();
   }
@@ -993,6 +1101,7 @@ window.AdaptIQ_UI = (() => {
     init,
     showScreen,
     addEventLog,
+    updateOrb,
     handleFlag,
     handleIntervention,
     updateSignal,
@@ -1000,6 +1109,9 @@ window.AdaptIQ_UI = (() => {
     handleGazeSignal,
     handleScoresUpdate,
     handleCalibrationComplete,
+    setMode,
+    updateSystemStatus,
+    updateSensorDot,
   };
 
 })();
