@@ -12,61 +12,57 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
     /* =============================================
        DESIGN TOKENS
     ============================================= */
     :root {
-      /* Apple/Tesla-inspired neutral base */
-      --bg-void:       #000000;
-      --bg-deep:       #0d0d0d;
-      --bg-panel:      #111111;
-      --bg-card:       #1a1a1a;
-      --bg-card-hover: #222222;
-      --bg-glass:      rgba(12, 12, 12, 0.92);
+      /* === COLOR PALETTE === */
+      --bg-void:    #1c1c1e;
+      --bg-panel:   #2c2c2e;
+      --bg-surface: #232325;
+      --bg-glass:   rgba(20,20,22,0.96);
 
-      /* Single accent: Apple blue */
       --accent:        #2997ff;
-      --accent-dim:    rgba(41, 151, 255, 0.12);
-      --accent-glow:   rgba(41, 151, 255, 0.3);
+      --accent-dim:    rgba(41,151,255,0.15);
+      --accent-border: rgba(41,151,255,0.3);
 
-      /* Backward-compat aliases — existing code uses these */
+      --green:  #30d158;
+      --yellow: #ffd60a;
+      --red:    #ff453a;
+
+      --text-primary:   #f5f5f7;
+      --text-secondary: rgba(255,255,255,0.6);
+      --text-muted:     rgba(255,255,255,0.3);
+
+      --border:        rgba(255,255,255,0.08);
+      --border-bright: rgba(255,255,255,0.12);
+
+      --font: 'Inter', -apple-system, sans-serif;
+
+      /* ── Backward-compat aliases ── */
+      --bg-deep:       #111111;
+      --bg-card:       #2c2c2e;
+      --bg-card-hover: #3a3a3c;
       --cyan:          #2997ff;
-      --cyan-dim:      rgba(41, 151, 255, 0.12);
-      --cyan-glow:     rgba(41, 151, 255, 0.3);
-
-      /* System-state colors (Apple HIG) */
-      --amber:         #f5a623;
-      --amber-dim:     rgba(245, 166, 35, 0.12);
-      --green:         #30d158;
-      --green-dim:     rgba(48, 209, 88, 0.1);
-      --red:           #ff453a;
-      --red-dim:       rgba(255, 69, 58, 0.12);
+      --cyan-dim:      rgba(41,151,255,0.15);
+      --cyan-glow:     rgba(41,151,255,0.3);
+      --accent-glow:   rgba(41,151,255,0.3);
+      --amber:         #ffd60a;
+      --amber-dim:     rgba(255,214,10,0.15);
       --purple:        #bf5af2;
-
-      /* Typography */
-      --text-primary:  #f5f5f7;
-      --text-secondary:#86868b;
-      --text-muted:    #3a3a3c;
-      --text-data:     #2997ff;
-
-      /* Borders */
-      --border:        rgba(255, 255, 255, 0.07);
-      --border-bright: rgba(255, 255, 255, 0.15);
-
-      /* Fonts */
-      --font-display:  'Inter', 'SF Pro Display', -apple-system, sans-serif;
+      --green-dim:     rgba(48,209,88,0.1);
+      --red-dim:       rgba(255,69,58,0.12);
+      --font-display:  'Inter', -apple-system, sans-serif;
       --font-mono:     'JetBrains Mono', monospace;
-
-      /* Spacing & shape */
       --radius-sm:     6px;
       --radius:        10px;
       --radius-lg:     16px;
-
-      /* Motion */
-      --transition:    180ms cubic-bezier(0.4, 0, 0.2, 1);
-      --transition-slow: 360ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition:    180ms cubic-bezier(0.4,0,0.2,1);
+      --transition-slow: 360ms cubic-bezier(0.4,0,0.2,1);
     }
 
     /* =============================================
@@ -1497,8 +1493,221 @@
     .metric-bar-fill   { box-shadow: none !important; }
 
     /* Ensure interactive buttons meet 44px tap target */
-    .mode-pill-btn     { min-height: 44px !important; }
-    .session-pill-btn  { min-height: 48px !important; }
+    /* =============================================
+       NEW DASHBOARD — complete override
+    ============================================= */
+
+    /* Layout */
+    #screen-dashboard { flex-direction: column; background: var(--bg-void); overflow: hidden; }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: 48px !important;
+      background: var(--bg-void) !important;
+      backdrop-filter: none !important;
+      border-bottom: 0.5px solid var(--border) !important;
+      padding: 0 20px !important;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0; position: relative; z-index: 20;
+    }
+    .topbar-left  { display: flex; align-items: center; gap: 10px; }
+    .topbar-center {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center;
+    }
+    .topbar-right { display: flex; align-items: center; }
+
+    .topbar-logo { display: flex; align-items: center; gap: 8px; }
+    .topbar-logo-mark-new {
+      width: 26px; height: 26px; border-radius: 7px;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 500; color: #fff; flex-shrink: 0;
+    }
+    .topbar-logo-name-new {
+      font-size: 14px; font-weight: 500; color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+    .topbar-timer-pill {
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 20px; padding: 3px 10px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .topbar-timer-pill .ti { font-size: 12px; }
+    .topbar-profile-chip-new {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 0.5px solid var(--accent-border);
+      border-radius: 20px; padding: 3px 9px;
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+
+    /* ── Video area ── */
+    .video-area {
+      flex: 1; position: relative; background: #000;
+      overflow: hidden; min-height: 260px;
+    }
+    .video-area #video-feed {
+      width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);
+    }
+    .video-area #face-overlay-canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      pointer-events: none; transform: scaleX(-1);
+    }
+
+    /* ── Overlay panels ── */
+    .overlay-panel {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 20;
+      background: var(--bg-glass);
+      border-top: 0.5px solid var(--border-bright);
+      padding: 16px 18px; display: none;
+    }
+    .overlay-panel.visible { display: block; }
+    .overlay-panel-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px;
+    }
+    .overlay-panel-title {
+      font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .overlay-panel-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 14px; line-height: 1;
+      padding: 2px 4px; transition: color 150ms; display: flex; align-items: center;
+    }
+    .overlay-panel-close:hover { color: var(--text-primary); }
+
+    /* Coach panel */
+    .coach-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .coach-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .coach-label { font-size: 11px; color: var(--accent); font-weight: 500; }
+    .coach-tip { font-size: 13px; line-height: 1.65; color: var(--text-secondary); margin: 0; }
+    .coach-tip em { color: var(--text-muted); font-style: italic; }
+
+    /* Score panel */
+    .score-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    }
+    .score-card {
+      background: rgba(255,255,255,0.05); border-radius: 9px;
+      padding: 10px 8px; text-align: center;
+    }
+    .score-card-value { font-size: 20px; font-weight: 500; line-height: 1; margin-bottom: 4px; }
+    .score-card-label { font-size: 10px; color: var(--text-muted); margin-bottom: 6px; line-height: 1.3; }
+    .score-card-bar { height: 3px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; }
+    .score-card-bar-fill { height: 100%; border-radius: 2px; transition: width 600ms ease, background-color 600ms ease; }
+
+    /* Signals panel */
+    .signals-row { display: flex; gap: 8px; }
+    .signal-pill {
+      flex: 1; background: rgba(255,255,255,0.05);
+      border-radius: 9px; padding: 10px 8px; text-align: center;
+    }
+    .signal-pill-icon { font-size: 18px; color: var(--text-muted); display: block; margin-bottom: 4px; }
+    .signal-pill-label {
+      font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 4px; display: block;
+    }
+    .signal-pill-value { font-size: 16px; font-weight: 500; }
+
+    /* ── Question bar ── */
+    .question-bar {
+      background: var(--bg-surface);
+      border-top: 0.5px solid var(--border);
+      padding: 13px 18px; flex-shrink: 0;
+    }
+    .question-bar-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 6px;
+    }
+    .question-bar-category {
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+    }
+    .question-bar-progress { font-size: 10px; color: var(--text-muted); }
+    .question-bar-text {
+      font-size: 13px; font-weight: 500; line-height: 1.5;
+      color: var(--text-primary); margin-bottom: 8px;
+    }
+    .question-bar-nav {
+      display: flex; gap: 8px; justify-content: flex-end; align-items: center;
+    }
+    .qnav-btn {
+      border-radius: 20px; border: 0.5px solid var(--border-bright);
+      background: transparent; color: var(--text-muted);
+      font-size: 11px; padding: 4px 12px; cursor: pointer;
+      font-family: var(--font-display); transition: all 150ms;
+    }
+    .qnav-btn:hover:not(:disabled) { border-color: var(--text-secondary); color: var(--text-primary); }
+    .qnav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .qnav-btn.qnav-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .qnav-btn.qnav-primary:disabled { background: var(--text-muted); border-color: var(--text-muted); }
+
+    /* ── Bottom controls ── */
+    .bottom-controls {
+      height: 68px; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 20px;
+      background: var(--bg-void); border-top: 0.5px solid var(--border); flex-shrink: 0;
+    }
+    .bottom-left  { display: flex; gap: 8px; }
+    .bottom-center{ display: flex; gap: 10px; align-items: center; }
+    .bottom-right { display: flex; gap: 8px; }
+
+    .panel-toggle-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      background: rgba(255,255,255,0.05); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 7px 12px; min-width: 56px;
+      cursor: pointer; color: var(--text-muted); font-size: 10px;
+      font-family: var(--font-display); transition: all 150ms;
+    }
+    .panel-toggle-btn .ti { font-size: 18px; }
+    .panel-toggle-btn:hover { background: rgba(255,255,255,0.09); color: var(--text-primary); }
+    .panel-toggle-btn.active {
+      background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent);
+    }
+
+    .call-btn {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: rgba(255,255,255,0.07); border: none;
+      font-size: 18px; color: var(--text-secondary);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 150ms;
+    }
+    .call-btn:hover { background: rgba(255,255,255,0.12); color: var(--text-primary); }
+    .call-btn.muted { background: rgba(255,69,58,0.3) !important; color: var(--red) !important; }
+    .call-btn-end { background: var(--red) !important; color: #fff !important; }
+    .call-btn-end:hover { filter: brightness(1.1); }
+
+    .util-btn {
+      height: 42px; padding: 0 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.07); border: none;
+      font-size: 18px; color: var(--text-secondary);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 150ms;
+    }
+    .util-btn:hover { background: rgba(255,255,255,0.12); color: var(--text-primary); }
+
+    /* ── Gaze dot ── */
+    #gaze-dot {
+      position: fixed; width: 16px; height: 16px; margin: -8px 0 0 -8px;
+      border-radius: 50%; border: 2px solid var(--accent);
+      background: rgba(41,151,255,0.3); pointer-events: none; z-index: 200;
+      transition: left 60ms linear, top 60ms linear; display: none;
+    }
+
+    /* ── PDF button on summary ── */
+    .btn-pdf {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 24px; border-radius: 24px;
+      background: var(--accent); color: #fff;
+      font-size: 13px; font-weight: 500; border: none; cursor: pointer;
+      font-family: var(--font-display); transition: all var(--transition);
+    }
+    .btn-pdf:hover { box-shadow: 0 0 20px var(--accent-glow); }
+    .btn-pdf .ti { font-size: 16px; }
   </style>
 </head>
 <body>
@@ -1652,278 +1861,192 @@
     <div class="topbar">
       <div class="topbar-left">
         <div class="topbar-logo">
-          <div class="topbar-logo-mark">
-            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="16" cy="16" r="14" stroke="rgba(41,151,255,0.25)" stroke-width="1"/>
-              <circle cx="16" cy="16" r="14" stroke="url(#tbGrad)" stroke-width="1.5"
-                stroke-dasharray="24 64" stroke-linecap="round"/>
-              <text x="16" y="20" text-anchor="middle" fill="#2997ff"
-                font-family="Inter,sans-serif" font-size="10" font-weight="700">AQ</text>
-              <defs>
-                <linearGradient id="tbGrad" x1="0" y1="0" x2="32" y2="32">
-                  <stop offset="0%" stop-color="#2997ff"/>
-                  <stop offset="100%" stop-color="#bf5af2"/>
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-          <div class="topbar-logo-name">Adapt<span>IQ</span></div>
-        </div>
-        <div class="topbar-divider"></div>
-        <div class="topbar-profile-chip">
-          <div class="topbar-profile-chip-dot"></div>
-          <span id="topbar-profile-label">ADHD</span>
+          <div class="topbar-logo-mark-new">AQ</div>
+          <div class="topbar-logo-name-new">AdaptIQ</div>
         </div>
       </div>
 
       <div class="topbar-center">
-        <div>
-          <div class="topbar-timer" id="session-timer">00:00</div>
-          <div class="topbar-timer-label">SESSION TIME</div>
+        <div class="topbar-timer-pill">
+          <i class="ti ti-clock"></i>
+          <span id="session-timer">00:00</span>
         </div>
       </div>
 
       <div class="topbar-right">
-        <div class="status-pill active" id="session-status">
-          <div class="pulse-dot"></div>
-          <span>Monitoring</span>
+        <div class="topbar-profile-chip-new">
+          <span id="topbar-profile-label">ADHD</span>
         </div>
-
-        <!-- 4 sensor status dots: camera · mic · AI · system -->
-        <div class="sensor-dots">
-          <div class="sensor-dot inactive" id="status-dot-camera">
-            <span class="sensor-dot-indicator"></span>
-            <span class="sensor-dot-tooltip">Camera inactive</span>
-          </div>
-          <div class="sensor-dot inactive" id="status-dot-mic">
-            <span class="sensor-dot-indicator"></span>
-            <span class="sensor-dot-tooltip">Microphone inactive</span>
-          </div>
-          <div class="sensor-dot inactive" id="status-dot-ai">
-            <span class="sensor-dot-indicator"></span>
-            <span class="sensor-dot-tooltip">AI offline — enter API key</span>
-          </div>
-          <div class="sensor-dot nominal" id="status-dot-system">
-            <span class="sensor-dot-indicator"></span>
-            <span class="sensor-dot-tooltip">All systems nominal</span>
-          </div>
-        </div>
-
-        <!-- Mode toggle pill (always visible) -->
-        <div class="mode-toggle-pill">
-          <button class="mode-pill-btn active" id="mode-btn-simple">Simple</button>
-          <button class="mode-pill-btn" id="mode-btn-technical">Technical</button>
-        </div>
-
-        <!-- Legacy hidden elements for backward-compat JS -->
-        <input type="checkbox" id="mode-toggle" style="display:none">
-        <span id="mode-label-simple" style="display:none">Simple</span>
-        <span id="mode-label-technical" style="display:none">Technical</span>
       </div>
     </div>
 
-    <!-- DASHBOARD BODY -->
-    <div class="dash-body">
+    <!-- VIDEO AREA + OVERLAY PANELS -->
+    <div class="video-area">
+      <video id="video-feed" autoplay muted playsinline></video>
+      <canvas id="face-overlay-canvas"></canvas>
 
-      <!-- LEFT PANEL: Biometric signals -->
-      <div class="dash-left">
-        <div class="panel-section-label">Biometric Signals</div>
-
-        <!-- Eye Tracking -->
-        <div class="metric-card" style="--metric-color: var(--cyan); --metric-glow: var(--cyan-glow); --metric-color-dim: var(--cyan-dim);">
-          <div class="metric-card-header">
-            <div class="metric-card-name">Gaze Deviation</div>
-            <div class="metric-card-badge" id="gds-badge">GDS</div>
-          </div>
-          <div class="metric-card-value" id="metric-gds">0.00<span class="metric-card-unit">σ</span></div>
-          <div class="metric-card-label">Screen gaze stability</div>
-          <div class="metric-sparkline"><canvas id="spark-gds"></canvas></div>
+      <!-- PANEL A — AI Coach -->
+      <div class="overlay-panel" id="panel-coach">
+        <div class="overlay-panel-header">
+          <span class="overlay-panel-title">AI Coach</span>
+          <button class="overlay-panel-close" data-panel="coach"><i class="ti ti-x"></i></button>
         </div>
-
-        <!-- Head Pose -->
-        <div class="metric-card" style="--metric-color: var(--amber); --metric-glow: rgba(255,183,0,0.4); --metric-color-dim: var(--amber-dim); --metric-color-alt: var(--cyan);">
-          <div class="metric-card-header">
-            <div class="metric-card-name">Head Pose Drift</div>
-            <div class="metric-card-badge" style="border-color: var(--amber); color: var(--amber); background: var(--amber-dim);">HPD</div>
-          </div>
-          <div class="metric-card-value" style="color: var(--amber); text-shadow: 0 0 20px rgba(255,183,0,0.4);" id="metric-hpd">0.0<span class="metric-card-unit">°</span></div>
-          <div class="metric-card-label">Head orientation variance</div>
-          <div class="metric-sparkline"><canvas id="spark-hpd"></canvas></div>
+        <div class="coach-row">
+          <div class="coach-dot"></div>
+          <span class="coach-label">AdaptIQ</span>
         </div>
+        <p class="coach-tip" id="coach-tip-text"><em>Listening for cues…</em></p>
+      </div>
 
-        <!-- Blink Rate -->
-        <div class="metric-card" style="--metric-color: var(--green); --metric-glow: rgba(0,255,136,0.4); --metric-color-dim: var(--green-dim);">
-          <div class="metric-card-header">
-            <div class="metric-card-name">Blink Rate Analysis</div>
-            <div class="metric-card-badge" style="border-color: var(--green); color: var(--green); background: var(--green-dim);">BRA</div>
-          </div>
-          <div class="metric-card-value" style="color: var(--green); text-shadow: 0 0 20px rgba(0,255,136,0.4);" id="metric-bra">0<span class="metric-card-unit">/min</span></div>
-          <div class="metric-card-label">Blink frequency</div>
-          <div class="metric-bar"><div class="metric-bar-fill" id="bar-bra" style="--metric-color: var(--green); --metric-color-alt: var(--cyan); --metric-glow: rgba(0,255,136,0.4); width: 0%;"></div></div>
+      <!-- PANEL B — Session Scores -->
+      <div class="overlay-panel" id="panel-score">
+        <div class="overlay-panel-header">
+          <span class="overlay-panel-title">Session Scores</span>
+          <button class="overlay-panel-close" data-panel="score"><i class="ti ti-x"></i></button>
         </div>
-
-        <div class="panel-section-label" style="margin-top: 4px;">Audio Analysis</div>
-
-        <!-- Vocal Energy -->
-        <div class="metric-card" style="--metric-color: var(--purple); --metric-glow: rgba(168,85,247,0.4); --metric-color-dim: rgba(168,85,247,0.1);">
-          <div class="metric-card-header">
-            <div class="metric-card-name">Vocal Energy Spread</div>
-            <div class="metric-card-badge" style="border-color: var(--purple); color: var(--purple); background: rgba(168,85,247,0.1);">VES</div>
+        <div class="score-grid">
+          <div class="score-card">
+            <div class="score-card-value" id="ps-eye">0</div>
+            <div class="score-card-label">Eye Contact</div>
+            <div class="score-card-bar"><div class="score-card-bar-fill" id="psb-eye" style="width:0%"></div></div>
           </div>
-          <div class="metric-card-value" style="color: var(--purple); text-shadow: 0 0 20px rgba(168,85,247,0.4);" id="metric-ves">0.00</div>
-          <div class="metric-card-label">Spectral energy distribution</div>
-          <div class="metric-sparkline"><canvas id="spark-ves"></canvas></div>
-        </div>
-
-        <!-- Speech Rate -->
-        <div class="metric-card" style="--metric-color: #ff6b9d; --metric-glow: rgba(255,107,157,0.4); --metric-color-dim: rgba(255,107,157,0.1); --metric-color-alt: var(--amber);">
-          <div class="metric-card-header">
-            <div class="metric-card-name">Speech Rate</div>
-            <div class="metric-card-badge" style="border-color: #ff6b9d; color: #ff6b9d; background: rgba(255,107,157,0.1);">SR</div>
+          <div class="score-card">
+            <div class="score-card-value" id="ps-head">0</div>
+            <div class="score-card-label">Head Stability</div>
+            <div class="score-card-bar"><div class="score-card-bar-fill" id="psb-head" style="width:0%"></div></div>
           </div>
-          <div class="metric-card-value" style="color: #ff6b9d; text-shadow: 0 0 20px rgba(255,107,157,0.4);" id="metric-sr">0<span class="metric-card-unit">wpm</span></div>
-          <div class="metric-card-label">Words per minute estimate</div>
-          <div class="metric-bar"><div class="metric-bar-fill" id="bar-sr" style="--metric-color: #ff6b9d; --metric-color-alt: var(--amber); --metric-glow: rgba(255,107,157,0.4); width: 0%;"></div></div>
+          <div class="score-card">
+            <div class="score-card-value" id="ps-vocal">0</div>
+            <div class="score-card-label">Vocal Confidence</div>
+            <div class="score-card-bar"><div class="score-card-bar-fill" id="psb-vocal" style="width:0%"></div></div>
+          </div>
+          <div class="score-card">
+            <div class="score-card-value" id="ps-clarity">0</div>
+            <div class="score-card-label">Clarity</div>
+            <div class="score-card-bar"><div class="score-card-bar-fill" id="psb-clarity" style="width:0%"></div></div>
+          </div>
         </div>
       </div>
 
-      <!-- CENTER: Question + Video -->
-      <div class="dash-center">
-
-        <!-- Question Card -->
-        <div class="question-card" id="question-card">
-          <div class="question-card-meta">
-            <span class="question-card-category" id="question-category">Basic Information</span>
-            <span class="question-card-progress" id="question-progress">1 / 26</span>
+      <!-- PANEL C — Live Signals -->
+      <div class="overlay-panel" id="panel-signals">
+        <div class="overlay-panel-header">
+          <span class="overlay-panel-title">Live Signals</span>
+          <button class="overlay-panel-close" data-panel="signals"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="signals-row">
+          <div class="signal-pill">
+            <i class="ti ti-eye signal-pill-icon"></i>
+            <span class="signal-pill-label">Eye</span>
+            <div class="signal-pill-value" id="sig-eye">0</div>
           </div>
-          <div class="question-card-text" id="question-text">What is your name?</div>
-          <div class="question-card-nav">
-            <button class="question-btn" id="btn-prev-q" disabled>← Prev</button>
-            <button class="question-btn primary" id="btn-next-q">Next →</button>
+          <div class="signal-pill">
+            <i class="ti ti-heart signal-pill-icon"></i>
+            <span class="signal-pill-label">Calm</span>
+            <div class="signal-pill-value" id="sig-calm">0</div>
+          </div>
+          <div class="signal-pill">
+            <i class="ti ti-microphone signal-pill-icon"></i>
+            <span class="signal-pill-label">Voice</span>
+            <div class="signal-pill-value" id="sig-voice">0</div>
           </div>
         </div>
-
-        <!-- Score section -->
-        <div class="scores-section">
-          <div class="score-ring-wrap">
-            <canvas id="score-ring-canvas" width="100" height="100"></canvas>
-            <div class="score-ring-inner">
-              <div class="score-ring-value" id="score-overall">--</div>
-              <div class="score-ring-grade" id="score-grade">—</div>
-            </div>
-          </div>
-
-          <div class="score-breakdown">
-            <div class="score-item">
-              <div class="score-item-header">
-                <span>Eye Contact</span>
-                <span class="score-item-val" id="score-eye">0</span>
-              </div>
-              <div class="score-item-bar"><div class="score-item-bar-fill" id="sbar-eye" style="width:0%"></div></div>
-            </div>
-            <div class="score-item">
-              <div class="score-item-header">
-                <span>Head Stability</span>
-                <span class="score-item-val" id="score-head">0</span>
-              </div>
-              <div class="score-item-bar"><div class="score-item-bar-fill" id="sbar-head" style="width:0%; background: var(--amber);"></div></div>
-            </div>
-            <div class="score-item">
-              <div class="score-item-header">
-                <span>Vocal Confidence</span>
-                <span class="score-item-val" id="score-vocal">0</span>
-              </div>
-              <div class="score-item-bar"><div class="score-item-bar-fill" id="sbar-vocal" style="width:0%; background: var(--purple);"></div></div>
-            </div>
-            <div class="score-item">
-              <div class="score-item-header">
-                <span>Speech Clarity</span>
-                <span class="score-item-val" id="score-clarity">0</span>
-              </div>
-              <div class="score-item-bar"><div class="score-item-bar-fill" id="sbar-clarity" style="width:0%; background: #ff6b9d;"></div></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Video feed -->
-        <div class="video-container" id="video-container">
-          <video id="video-feed" autoplay muted playsinline></video>
-          <canvas id="face-overlay-canvas"></canvas>
-
-          <!-- Camera view mode toggle -->
-          <div class="cam-mode-toggle">
-            <button class="cam-mode-btn active" id="cam-btn-default" title="Default">⬡</button>
-            <button class="cam-mode-btn" id="cam-btn-minimized" title="Minimized PiP">⊡</button>
-            <button class="cam-mode-btn" id="cam-btn-fullscreen" title="Fullscreen Ghost">⬚</button>
-          </div>
-        </div>
-
-        <!-- Session control -->
-        <div class="center-footer">
-          <button class="session-pill-btn" id="btn-end-session">End Session</button>
-        </div>
-      </div>
-
-      <!-- RIGHT PANEL: Secondary metrics + log -->
-      <div class="dash-right">
-        <div class="panel-section-label">Derived Scores</div>
-
-        <!-- OSR -->
-        <div class="metric-card" style="--metric-color: #00d4aa; --metric-glow: rgba(0,212,170,0.4); --metric-color-dim: rgba(0,212,170,0.1); --metric-color-alt: var(--cyan);">
-          <div class="metric-card-header">
-            <div class="metric-card-name">Off-Screen Ratio</div>
-            <div class="metric-card-badge" style="border-color:#00d4aa; color:#00d4aa; background:rgba(0,212,170,0.1);">OSR</div>
-          </div>
-          <div class="metric-card-value" style="color:#00d4aa; text-shadow: 0 0 20px rgba(0,212,170,0.4);" id="metric-osr">0.0<span class="metric-card-unit">%</span></div>
-          <div class="metric-card-label">Time gaze off screen</div>
-          <div class="metric-bar"><div class="metric-bar-fill" id="bar-osr" style="--metric-color:#00d4aa; --metric-color-alt:var(--cyan); --metric-glow:rgba(0,212,170,0.4); width:0%;"></div></div>
-        </div>
-
-        <!-- ET -->
-        <div class="metric-card" style="--metric-color: var(--cyan); --metric-glow: var(--cyan-glow); --metric-color-dim: var(--cyan-dim);">
-          <div class="metric-card-header">
-            <div class="metric-card-name">Engagement Time</div>
-            <div class="metric-card-badge">ET</div>
-          </div>
-          <div class="metric-card-value" id="metric-et">0<span class="metric-card-unit">s</span></div>
-          <div class="metric-card-label">Seconds with face detected</div>
-        </div>
-
-        <!-- CES -->
-        <div class="metric-card" style="--metric-color: var(--amber); --metric-glow: rgba(255,183,0,0.4); --metric-color-dim: var(--amber-dim); --metric-color-alt: var(--red);">
-          <div class="metric-card-header">
-            <div class="metric-card-name">Cognitive Engine Score</div>
-            <div class="metric-card-badge" style="border-color: var(--amber); color: var(--amber); background: var(--amber-dim);">CES</div>
-          </div>
-          <div class="metric-card-value" style="color: var(--amber); text-shadow: 0 0 20px rgba(255,183,0,0.4);" id="metric-ces">0.0</div>
-          <div class="metric-card-label">Combined cognitive load estimate</div>
-          <div class="metric-sparkline"><canvas id="spark-ces"></canvas></div>
-        </div>
-
-        <!-- SILR -->
-        <div class="metric-card" style="--metric-color: #00b4d8; --metric-glow: rgba(0,180,216,0.4); --metric-color-dim: rgba(0,180,216,0.1); --metric-color-alt: var(--purple);">
-          <div class="metric-card-header">
-            <div class="metric-card-name">Silence/Latency Ratio</div>
-            <div class="metric-card-badge" style="border-color:#00b4d8; color:#00b4d8; background:rgba(0,180,216,0.1);">SILR</div>
-          </div>
-          <div class="metric-card-value" style="color:#00b4d8; text-shadow:0 0 20px rgba(0,180,216,0.4);" id="metric-silr">0.00</div>
-          <div class="metric-card-label">Pause-to-speech ratio</div>
-          <div class="metric-sparkline"><canvas id="spark-silr"></canvas></div>
-        </div>
-
-        <!-- PVS -->
-        <div class="metric-card" style="--metric-color: var(--green); --metric-glow: rgba(0,255,136,0.4); --metric-color-dim: var(--green-dim);">
-          <div class="metric-card-header">
-            <div class="metric-card-name">Pitch Variance Score</div>
-            <div class="metric-card-badge" style="border-color:var(--green); color:var(--green); background:var(--green-dim);">PVS</div>
-          </div>
-          <div class="metric-card-value" style="color:var(--green); text-shadow:0 0 20px rgba(0,255,136,0.4);" id="metric-pvs">0.00</div>
-          <div class="metric-card-label">Prosodic variability</div>
-          <div class="metric-bar"><div class="metric-bar-fill" id="bar-pvs" style="--metric-color:var(--green); --metric-color-alt:var(--cyan); --metric-glow:rgba(0,255,136,0.4); width:0%;"></div></div>
-        </div>
-
       </div>
     </div>
+
+    <!-- QUESTION BAR -->
+    <div class="question-bar">
+      <div class="question-bar-meta">
+        <span class="question-bar-category" id="question-category">Basic Information</span>
+        <span class="question-bar-progress" id="question-progress">1 / 26</span>
+      </div>
+      <div class="question-bar-text" id="question-text">What is your name?</div>
+      <div class="question-bar-nav">
+        <button class="qnav-btn" id="btn-prev-q" disabled>← Prev</button>
+        <button class="qnav-btn qnav-primary" id="btn-next-q">Next →</button>
+      </div>
+    </div>
+
+    <!-- BOTTOM CONTROLS -->
+    <div class="bottom-controls">
+      <div class="bottom-left">
+        <button class="panel-toggle-btn" id="btn-coach" data-panel="coach">
+          <i class="ti ti-robot"></i>
+          <span>Coach</span>
+        </button>
+        <button class="panel-toggle-btn" id="btn-score" data-panel="score">
+          <i class="ti ti-chart-bar"></i>
+          <span>Scores</span>
+        </button>
+        <button class="panel-toggle-btn" id="btn-signals" data-panel="signals">
+          <i class="ti ti-activity"></i>
+          <span>Signals</span>
+        </button>
+      </div>
+
+      <div class="bottom-center">
+        <button class="call-btn" id="btn-mic-toggle" title="Toggle Microphone">
+          <i class="ti ti-microphone" id="mic-icon"></i>
+        </button>
+        <button class="call-btn" id="btn-cam-toggle" title="Toggle Camera">
+          <i class="ti ti-video" id="cam-icon"></i>
+        </button>
+        <button class="call-btn call-btn-end" id="btn-end-session" title="End Session">
+          <i class="ti ti-phone-off"></i>
+        </button>
+      </div>
+
+      <div class="bottom-right">
+        <button class="util-btn" id="btn-settings" title="Settings">
+          <i class="ti ti-settings"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Legacy hidden elements — keep IDs for backward-compat JS -->
+    <div style="display:none" aria-hidden="true">
+      <canvas id="score-ring-canvas" width="100" height="100"></canvas>
+      <div id="score-overall">--</div>
+      <div id="score-grade">—</div>
+      <div id="score-eye">0</div>
+      <div id="score-head">0</div>
+      <div id="score-vocal">0</div>
+      <div id="score-clarity">0</div>
+      <div id="sbar-eye"></div><div id="sbar-head"></div>
+      <div id="sbar-vocal"></div><div id="sbar-clarity"></div>
+      <div id="metric-gds">0</div><div id="metric-hpd">0</div>
+      <div id="metric-bra">0</div><div id="metric-ves">0</div>
+      <div id="metric-sr">0</div><div id="metric-osr">0</div>
+      <div id="metric-et">0</div><div id="metric-ces">0</div>
+      <div id="metric-silr">0</div><div id="metric-pvs">0</div>
+      <div id="bar-bra"></div><div id="bar-sr"></div>
+      <div id="bar-osr"></div><div id="bar-pvs"></div>
+      <canvas id="spark-gds"></canvas><canvas id="spark-hpd"></canvas>
+      <canvas id="spark-ves"></canvas><canvas id="spark-ces"></canvas>
+      <canvas id="spark-silr"></canvas>
+      <button id="mode-btn-simple" class="active"></button>
+      <button id="mode-btn-technical"></button>
+      <input type="checkbox" id="mode-toggle">
+      <span id="mode-label-simple"></span><span id="mode-label-technical"></span>
+      <div id="question-card"></div>
+      <div class="sensor-dot inactive" id="status-dot-camera">
+        <span class="sensor-dot-indicator"></span>
+        <span class="sensor-dot-tooltip">Camera inactive</span>
+      </div>
+      <div class="sensor-dot inactive" id="status-dot-mic">
+        <span class="sensor-dot-indicator"></span>
+        <span class="sensor-dot-tooltip">Microphone inactive</span>
+      </div>
+      <div class="sensor-dot inactive" id="status-dot-ai">
+        <span class="sensor-dot-indicator"></span>
+        <span class="sensor-dot-tooltip">AI offline</span>
+      </div>
+      <div class="sensor-dot nominal" id="status-dot-system">
+        <span class="sensor-dot-indicator"></span>
+        <span class="sensor-dot-tooltip">Systems nominal</span>
+      </div>
+    </div>
+
   </div>
 
   <!-- ==========================================
@@ -1972,7 +2095,10 @@
 
       <div class="summary-actions">
         <button class="btn-secondary" id="btn-new-session">New Session</button>
-        <button class="btn-primary" id="btn-export">Export Report</button>
+        <button class="btn-pdf" id="btn-export">
+          <i class="ti ti-download"></i>
+          Download PDF Report
+        </button>
       </div>
     </div>
   </div>
@@ -3281,7 +3407,7 @@ window.BrainManager = {
       });
     }
 
-    return { init, next, prev, reset, total: QUESTIONS.length };
+    return { init, next, prev, reset, total: QUESTIONS.length, get(i) { return QUESTIONS[i]; } };
   })();
   </script>
 

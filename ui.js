@@ -36,6 +36,12 @@ window.AdaptIQ_UI = (() => {
     maxSparkPoints: 40,
     mode: 'simple',
     gazeLastRenderTime: 0,
+    // New: per-question tracking
+    questionIndex: 0,
+    questionSnapshots: Array.from({ length: 30 }, () => ({
+      eyeContact: 0, headStability: 0, vocalConfidence: 0, speechClarity: 0, samples: 0
+    })),
+    coachBuffer: '',
   };
 
   // ============================================================
@@ -362,18 +368,56 @@ window.AdaptIQ_UI = (() => {
     initScoreRing();
     initVideoFeed();
 
-    document.getElementById('btn-end-session').addEventListener('click', () => {
+    // End session wired in app init; also wire here for safety
+    document.getElementById('btn-end-session')?.addEventListener('click', () => {
       Bus.emit('session:end', {});
       endSession();
     });
 
-    // Mode toggle pill buttons
+    // Mic toggle
+    const btnMic = document.getElementById('btn-mic-toggle');
+    if (btnMic) {
+      btnMic.addEventListener('click', () => {
+        const icon = document.getElementById('mic-icon');
+        const muted = btnMic.classList.toggle('muted');
+        if (icon) icon.className = muted ? 'ti ti-microphone-off' : 'ti ti-microphone';
+        // Mute/unmute the media stream if available
+        const video = document.getElementById('video-feed');
+        if (video && video.srcObject) {
+          video.srcObject.getAudioTracks().forEach(t => { t.enabled = !muted; });
+        }
+      });
+    }
+
+    // Camera toggle
+    const btnCam = document.getElementById('btn-cam-toggle');
+    if (btnCam) {
+      btnCam.addEventListener('click', () => {
+        const icon = document.getElementById('cam-icon');
+        const hidden = btnCam.classList.toggle('muted');
+        if (icon) icon.className = hidden ? 'ti ti-video-off' : 'ti ti-video';
+        const video = document.getElementById('video-feed');
+        if (video && video.srcObject) {
+          video.srcObject.getVideoTracks().forEach(t => { t.enabled = !hidden; });
+        }
+        if (video) video.style.opacity = hidden ? '0' : '1';
+      });
+    }
+
+    // Track question index changes for per-question snapshots
+    document.getElementById('btn-next-q')?.addEventListener('click', () => {
+      state.questionIndex = Math.min(state.questionSnapshots.length - 1, state.questionIndex + 1);
+    });
+    document.getElementById('btn-prev-q')?.addEventListener('click', () => {
+      state.questionIndex = Math.max(0, state.questionIndex - 1);
+    });
+
+    // Mode toggle pill buttons (legacy)
     const btnSimple = document.getElementById('mode-btn-simple');
     const btnTech   = document.getElementById('mode-btn-technical');
     if (btnSimple) btnSimple.addEventListener('click', () => setMode('simple'));
     if (btnTech)   btnTech.addEventListener('click',   () => setMode('technical'));
 
-    // Legacy checkbox (hidden, kept for backward compat)
     const modeToggle = document.getElementById('mode-toggle');
     if (modeToggle) {
       modeToggle.addEventListener('change', (e) => {
@@ -381,14 +425,50 @@ window.AdaptIQ_UI = (() => {
       });
     }
 
-    // Reflect API key in AI sensor dot
     const apiKeyInput = document.getElementById('api-key-input');
     const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
     updateSensorDot('ai', apiKey ? 'active' : 'inactive',
       apiKey ? 'AI ready' : 'AI offline — enter API key');
 
+    initPanelToggles();
     initCameraViewModes();
     setMode('simple');
+  }
+
+  // ============================================================
+  // PANEL TOGGLE LOGIC
+  // ============================================================
+  function initPanelToggles() {
+    const panelMap = {
+      coach:   { btn: 'btn-coach',   panel: 'panel-coach' },
+      score:   { btn: 'btn-score',   panel: 'panel-score' },
+      signals: { btn: 'btn-signals', panel: 'panel-signals' },
+    };
+
+    function closeAll() {
+      Object.values(panelMap).forEach(({ btn, panel }) => {
+        document.getElementById(panel)?.classList.remove('visible');
+        document.getElementById(btn)?.classList.remove('active');
+      });
+    }
+
+    Object.entries(panelMap).forEach(([key, { btn, panel }]) => {
+      const btnEl   = document.getElementById(btn);
+      const panelEl = document.getElementById(panel);
+      if (!btnEl || !panelEl) return;
+
+      btnEl.addEventListener('click', () => {
+        const isOpen = panelEl.classList.contains('visible');
+        closeAll();
+        if (!isOpen) {
+          panelEl.classList.add('visible');
+          btnEl.classList.add('active');
+        }
+      });
+
+      // Close button inside panel
+      panelEl.querySelector('.overlay-panel-close')?.addEventListener('click', closeAll);
+    });
   }
 
   // ============================================================
@@ -693,6 +773,27 @@ window.AdaptIQ_UI = (() => {
     if (data.ces   !== undefined) { m.ces   = data.ces;   pushSparkData('ces', data.ces); }
 
     renderMetrics();
+    renderSignalsPanel();
+  }
+
+  function renderSignalsPanel() {
+    const m = state.metrics;
+    // Eye = 100 - off-screen ratio
+    const eyeVal  = Math.round(Math.max(0, 100 - (m.osr || 0)));
+    // Calm = 100 - emotional tension
+    const calmVal = Math.round(Math.max(0, 100 - (m.et || 0)));
+    // Voice = vocal energy spread (0-100)
+    const voiceVal = Math.round(Math.max(0, Math.min(100, (m.ves || 0))));
+
+    function setSignal(id, val) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = val;
+      el.style.color = scoreColor(val);
+    }
+    setSignal('sig-eye',   eyeVal);
+    setSignal('sig-calm',  calmVal);
+    setSignal('sig-voice', voiceVal);
   }
 
   function renderMetrics() {
@@ -852,6 +953,15 @@ window.AdaptIQ_UI = (() => {
     });
   }
 
+  // ============================================================
+  // SCORE COLOR HELPER
+  // ============================================================
+  function scoreColor(val) {
+    if (val >= 75) return '#30d158';
+    if (val >= 50) return '#ffd60a';
+    return '#ff453a';
+  }
+
   // Legacy no-ops kept for any external callers
   function hideIntervention() {}
   function handleFlag(data) {
@@ -872,7 +982,29 @@ window.AdaptIQ_UI = (() => {
     const label = ACTION_LABELS[data.action] || 'Intervention';
     const desc  = (data.chunk !== undefined ? '' : data.message) || '';
     updateOrb('orange', label, desc);
+
+    // Feed the Coach panel
+    if (data.action === 'claude_response') {
+      if (data.chunk !== undefined) {
+        state.coachBuffer += data.chunk;
+        updateCoachPanel(state.coachBuffer, false);
+      }
+      if (data.done) {
+        if (!state.coachBuffer && data.message) state.coachBuffer = data.message;
+        updateCoachPanel(state.coachBuffer, true);
+        state.coachBuffer = '';
+      }
+    } else if (data.message) {
+      updateCoachPanel(data.message, true);
+    }
+
     console.log('[AdaptIQ Intervention]', data.action || 'adaptive break');
+  }
+
+  function updateCoachPanel(text, final) {
+    const el = document.getElementById('coach-tip-text');
+    if (!el || !text) return;
+    el.innerHTML = text.replace(/\n/g, '<br>') + (final ? '' : ' <span style="opacity:0.5">▌</span>');
   }
 
   // ============================================================
@@ -886,19 +1018,47 @@ window.AdaptIQ_UI = (() => {
 
     updateScoreRing(overall, grade);
 
-    // Breakdown bars
-    const vals = [
+    // Legacy hidden breakdown
+    const legacyVals = [
       ['score-eye',    'sbar-eye',    eyeContact],
       ['score-head',   'sbar-head',   headStability],
       ['score-vocal',  'sbar-vocal',  vocalConfidence],
       ['score-clarity','sbar-clarity', speechClarity],
     ];
-    vals.forEach(([scoreId, barId, val]) => {
+    legacyVals.forEach(([scoreId, barId, val]) => {
       const scoreEl = document.getElementById(scoreId);
       const barEl   = document.getElementById(barId);
       if (scoreEl) scoreEl.textContent = Math.round(val || 0);
       if (barEl)   barEl.style.width = `${Math.min(100, val || 0)}%`;
     });
+
+    // ── Score overlay panel ──
+    const panelVals = [
+      ['ps-eye',    'psb-eye',    eyeContact],
+      ['ps-head',   'psb-head',   headStability],
+      ['ps-vocal',  'psb-vocal',  vocalConfidence],
+      ['ps-clarity','psb-clarity', speechClarity],
+    ];
+    panelVals.forEach(([valId, barId, val]) => {
+      const v = Math.round(val || 0);
+      const color = scoreColor(v);
+      const valEl = document.getElementById(valId);
+      const barEl = document.getElementById(barId);
+      if (valEl) { valEl.textContent = v; valEl.style.color = color; }
+      if (barEl) { barEl.style.width = `${v}%`; barEl.style.background = color; }
+    });
+
+    // ── Per-question snapshot (running average) ──
+    const qi = state.questionIndex;
+    if (qi >= 0 && qi < state.questionSnapshots.length) {
+      const snap = state.questionSnapshots[qi];
+      snap.samples++;
+      const n = snap.samples;
+      snap.eyeContact      += ((eyeContact      || 0) - snap.eyeContact)      / n;
+      snap.headStability   += ((headStability   || 0) - snap.headStability)   / n;
+      snap.vocalConfidence += ((vocalConfidence || 0) - snap.vocalConfidence) / n;
+      snap.speechClarity   += ((speechClarity  || 0) - snap.speechClarity)   / n;
+    }
 
     console.log(`[AdaptIQ Scores] Overall: ${Math.round(overall)}% (${grade})`);
   }
@@ -944,31 +1104,254 @@ window.AdaptIQ_UI = (() => {
 
     // Summary actions
     document.getElementById('btn-new-session').addEventListener('click', () => {
-      // Reset state and go back to profile selection
       state.profile = null;
       state.sessionSeconds = 0;
+      state.questionIndex = 0;
+      state.coachBuffer = '';
+      state.questionSnapshots = Array.from({ length: 30 }, () => ({
+        eyeContact: 0, headStability: 0, vocalConfidence: 0, speechClarity: 0, samples: 0
+      }));
       state.sparkBuffers = { gds: [], hpd: [], ves: [], ces: [], silr: [] };
+      // Reset coach panel
+      const coachTip = document.getElementById('coach-tip-text');
+      if (coachTip) coachTip.innerHTML = '<em>Listening for cues…</em>';
       showScreen('profile');
     });
 
     document.getElementById('btn-export').addEventListener('click', exportReport);
   }
 
-  function exportReport() {
-    const report = {
-      profile:   state.profile,
-      duration:  formatTime(),
-      scores:    state.scores,
-      metrics:   state.metrics,
-      timestamp: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `adaptiq-session-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  async function exportReport() {
+    const btn = document.getElementById('btn-export');
+    if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
+    try {
+      await generatePDF();
+    } finally {
+      if (btn) {
+        btn.innerHTML = '<i class="ti ti-download"></i> Download PDF Report';
+        btn.disabled = false;
+      }
+    }
+  }
+
+  // ============================================================
+  // PDF GENERATION
+  // ============================================================
+  async function generatePDF() {
+    if (!window.jspdf) {
+      console.warn('[PDF] jsPDF not loaded');
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+
+    const profile  = state.profile || 'default';
+    const scores   = state.scores;
+    const dateStr  = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const duration = formatTime();
+    const pageW    = doc.internal.pageSize.getWidth();
+    const pageH    = doc.internal.pageSize.getHeight();
+    const margin   = 40;
+    const contentW = pageW - margin * 2;
+    let y = margin;
+    let pageNum = 1;
+
+    function addFooter() {
+      const fy = pageH - 20;
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      doc.line(margin, fy - 8, pageW - margin, fy - 8);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.setFont('helvetica', 'normal');
+      doc.text('AdaptIQ — Adaptive Interview Intelligence', margin, fy);
+      doc.text(`Page ${pageNum}`, pageW - margin, fy, { align: 'right' });
+    }
+
+    function newPage() {
+      addFooter();
+      doc.addPage();
+      pageNum++;
+      y = margin;
+    }
+
+    function checkBreak(needed) {
+      if (y + needed > pageH - 40) newPage();
+    }
+
+    // ── Cover ──
+    doc.setFontSize(32);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(41, 151, 255);
+    doc.text('AdaptIQ', margin, y);
+    y += 24;
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text('Session Report', margin, y);
+    y += 14;
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`${dateStr}  ·  Duration: ${duration}  ·  Profile: ${profile.toUpperCase()}`, margin, y);
+    y += 10;
+
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, pageW - margin, y);
+    y += 16;
+
+    // ── Overall Scores ──
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(50, 50, 50);
+    doc.text('Overall Scores', margin, y);
+    y += 12;
+
+    [
+      ['Eye Contact',       scores.eyeContact],
+      ['Head Stability',    scores.headStability],
+      ['Vocal Confidence',  scores.vocalConfidence],
+      ['Clarity',           scores.speechClarity],
+    ].forEach(([label, val]) => {
+      const v = Math.round(val || 0);
+      const rgb = v >= 75 ? [48, 209, 88] : v >= 50 ? [245, 166, 35] : [255, 69, 58];
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60, 60, 60);
+      doc.text(label, margin + 8, y);
+      doc.setTextColor(...rgb);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${v}`, pageW - margin, y, { align: 'right' });
+      y += 8;
+    });
+    y += 10;
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, y, pageW - margin, y);
+    y += 16;
+
+    // ── Fetch per-question notes from Claude ──
+    let questionNotes = {};
+    const apiKey = document.getElementById('api-key-input')?.value?.trim();
+    if (apiKey) {
+      const snapshots = state.questionSnapshots
+        .map((s, i) => s.samples > 0 ? {
+          q: i + 1,
+          eye: Math.round(s.eyeContact),
+          head: Math.round(s.headStability),
+          vocal: Math.round(s.vocalConfidence),
+          clarity: Math.round(s.speechClarity),
+        } : null)
+        .filter(Boolean);
+
+      if (snapshots.length > 0) {
+        try {
+          const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+              'content-type': 'application/json',
+              'anthropic-dangerous-direct-browser-access': 'true',
+            },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-6',
+              max_tokens: 2000,
+              messages: [{
+                role: 'user',
+                content: `You are a supportive interview coach writing a session report for a neurodivergent job seeker (profile: ${profile}). For each question below, write 2-3 plain-English sentences about what went well, what to improve, and one concrete tip. Be warm, specific, and never use jargon or acronyms. Return a JSON array where each element has "q" (question number) and "note" fields only. Data: ${JSON.stringify(snapshots)}`,
+              }],
+            }),
+          });
+          if (resp.ok) {
+            const json = await resp.json();
+            const text = json.content?.[0]?.text || '';
+            const match = text.match(/\[[\s\S]*\]/);
+            if (match) {
+              JSON.parse(match[0]).forEach(item => { questionNotes[item.q] = item.note; });
+            }
+          }
+        } catch (err) {
+          console.warn('[PDF] Claude notes failed:', err);
+        }
+      }
+    }
+
+    // ── Per-question breakdown ──
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(50, 50, 50);
+    doc.text('Question-by-question Breakdown', margin, y);
+    y += 14;
+
+    const qm = window.QuestionManager;
+    const total = qm ? qm.total : state.questionSnapshots.length;
+
+    for (let i = 0; i < total; i++) {
+      const snap  = state.questionSnapshots[i];
+      if (!snap || snap.samples === 0) continue;
+
+      const qData = qm ? qm.get(i) : null;
+      const qText = qData ? `Q${i + 1}. ${qData.q}` : `Question ${i + 1}`;
+      const overallQ = snap.samples > 0
+        ? snap.eyeContact * 0.25 + snap.headStability * 0.20 + snap.vocalConfidence * 0.25 + snap.speechClarity * 0.30
+        : 0;
+      const grade = overallQ >= 85 ? 'A' : overallQ >= 70 ? 'B' : overallQ >= 55 ? 'C' : overallQ >= 40 ? 'D' : 'F';
+
+      checkBreak(60);
+
+      // Question text + grade
+      const lines = doc.splitTextToSize(qText, contentW - 30);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(50, 50, 50);
+      doc.text(lines, margin, y);
+      doc.setTextColor(41, 151, 255);
+      doc.text(grade, pageW - margin, y, { align: 'right' });
+      y += lines.length * 12 + 4;
+
+      // Tags
+      const tags = [];
+      if (snap.eyeContact >= 75)     tags.push({ t: '✓ Good eye contact',       c: [48,209,88]  });
+      if (snap.headStability >= 75)  tags.push({ t: '✓ Stable head position',    c: [48,209,88]  });
+      if (snap.vocalConfidence >= 75)tags.push({ t: '✓ Strong vocal confidence', c: [48,209,88]  });
+      if (snap.eyeContact < 50)      tags.push({ t: '⚠ Eye contact needs work',  c: [255,214,10] });
+      if (snap.headStability < 50)   tags.push({ t: '⚠ Head movement detected',  c: [255,214,10] });
+      if (snap.speechClarity < 50)   tags.push({ t: '✗ Speech clarity low',      c: [255,69,58]  });
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      tags.forEach(({ t, c }) => {
+        checkBreak(12);
+        doc.setTextColor(...c);
+        doc.text(t, margin + 8, y);
+        y += 11;
+      });
+
+      // AI note
+      const note = questionNotes[i + 1];
+      if (note) {
+        checkBreak(20);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(80, 80, 80);
+        const noteLines = doc.splitTextToSize(note, contentW - 8);
+        checkBreak(noteLines.length * 11 + 4);
+        doc.text(noteLines, margin + 8, y);
+        y += noteLines.length * 11 + 4;
+      }
+
+      // Separator
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.line(margin, y, pageW - margin, y);
+      y += 10;
+    }
+
+    addFooter();
+    doc.save(`adaptiq-report-${new Date().toISOString().split('T')[0]}.pdf`);
   }
 
   // ============================================================
