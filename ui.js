@@ -14,7 +14,7 @@ window.AdaptIQ_UI = (() => {
   // STATE
   // ============================================================
   const state = {
-    currentScreen: 'loading',
+    currentScreen: 'profile',
     profile: null,
     sessionStart: null,
     sessionTimerInterval: null,
@@ -52,67 +52,6 @@ window.AdaptIQ_UI = (() => {
     const target = document.getElementById(`screen-${id}`);
     if (target) target.classList.add('active');
     state.currentScreen = id;
-  }
-
-  // ============================================================
-  // BOOT / LOADING SCREEN
-  // ============================================================
-  const bootTasks = [
-    { id: 'task-models', label: 'Loading AI models…',         pct: 20  },
-    { id: 'task-camera', label: 'Requesting camera access…',  pct: 45  },
-    { id: 'task-audio',  label: 'Initializing audio…',        pct: 65  },
-    { id: 'task-gaze',   label: 'Calibrating gaze tracker…',  pct: 85  },
-    { id: 'task-ready',  label: 'All systems ready!',          pct: 100 },
-  ];
-
-  function setBootProgress(pct, label) {
-    const bar = document.getElementById('boot-progress-bar');
-    const pctEl = document.getElementById('boot-pct');
-    const labelEl = document.getElementById('boot-task-label');
-    if (bar) bar.style.width = `${pct}%`;
-    if (pctEl) pctEl.textContent = `${Math.round(pct)}%`;
-    if (labelEl && label) labelEl.textContent = label;
-  }
-
-  function markBootTask(taskId, done = true) {
-    const el = document.getElementById(taskId);
-    if (!el) return;
-    const icon = el.querySelector('.boot-task-icon');
-    el.classList.toggle('done', done);
-    el.classList.toggle('active', !done);
-    if (icon) icon.textContent = done ? '✓' : '◉';
-  }
-
-  function setBootTaskActive(taskId) {
-    const el = document.getElementById(taskId);
-    if (!el) return;
-    el.classList.add('active');
-    const icon = el.querySelector('.boot-task-icon');
-    if (icon) icon.textContent = '◉';
-  }
-
-  function runBootSequence() {
-    // Simulated boot: tick through tasks, await models:loaded from Bus
-    let step = 0;
-
-    function nextStep() {
-      if (step >= bootTasks.length) return;
-      const task = bootTasks[step];
-      setBootTaskActive(task.id);
-      setBootProgress(task.pct, task.label);
-      setTimeout(() => {
-        markBootTask(task.id, true);
-        step++;
-        if (step < bootTasks.length) {
-          setTimeout(nextStep, 300 + Math.random() * 300);
-        } else {
-          // Final — wait a beat then show profile screen
-          setTimeout(() => showScreen('profile'), 600);
-        }
-      }, 600 + Math.random() * 400);
-    }
-
-    setTimeout(nextStep, 400);
   }
 
   // ============================================================
@@ -1424,10 +1363,7 @@ window.AdaptIQ_UI = (() => {
     Bus.on('intervention:trigger',  handleIntervention);
     Bus.on('scores:update',         handleScoresUpdate);
     Bus.on('calibration:complete',  handleCalibrationComplete);
-    Bus.on('models:loaded',         () => {
-      setBootProgress(100, 'All systems ready!');
-      markBootTask('task-ready', true);
-    });
+    Bus.on('models:loaded',         () => { /* models ready */ });
     Bus.on('session:end', (data) => {
       if (data && data.summary) showSummary(data.summary);
       else endSession();
@@ -1476,7 +1412,6 @@ window.AdaptIQ_UI = (() => {
     initProfileScreen();
     initOrbClickHandler();
     initKeyboardShortcuts();
-    runBootSequence();
   }
 
   // Expose a minimal public API for debugging/external use

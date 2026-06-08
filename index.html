@@ -11,7 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/meyda/dist/web/meyda.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -41,7 +41,7 @@
       --border:        rgba(255,255,255,0.08);
       --border-bright: rgba(255,255,255,0.12);
 
-      --font: 'Inter', -apple-system, sans-serif;
+      --font: 'Space Grotesk', -apple-system, sans-serif;
 
       /* ── Backward-compat aliases ── */
       --bg-deep:       #111111;
@@ -56,8 +56,8 @@
       --purple:        #bf5af2;
       --green-dim:     rgba(48,209,88,0.1);
       --red-dim:       rgba(255,69,58,0.12);
-      --font-display:  'Inter', -apple-system, sans-serif;
-      --font-mono:     'JetBrains Mono', monospace;
+      --font-display:  'Space Grotesk', -apple-system, sans-serif;
+      --font-mono:     'Space Mono', monospace;
       --radius-sm:     6px;
       --radius:        10px;
       --radius-lg:     16px;
@@ -138,205 +138,227 @@
     }
 
     /* =============================================
-       SCREEN 1 — LOADING / BOOT
-    ============================================= */
-    #screen-loading {
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg-void);
-    }
-
-    .boot-logo {
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
-      margin-bottom: 60px;
-    }
-    .boot-logo-mark {
-      position: relative;
-      width: 80px; height: 80px;
-    }
-    .boot-logo-mark svg {
-      width: 100%; height: 100%;
-      animation: rotateRing 6s linear infinite;
-    }
-    @keyframes rotateRing { to { transform: rotate(360deg); } }
-
-    .boot-logo-inner {
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-display); font-size: 22px; font-weight: 800;
-      color: var(--cyan);
-      text-shadow: 0 0 20px var(--cyan-glow);
-    }
-
-    .boot-title {
-      font-family: var(--font-display); font-size: 36px; font-weight: 800;
-      letter-spacing: -0.01em;
-      color: var(--text-primary);
-    }
-    .boot-subtitle {
-      font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-
-    .boot-progress-wrap {
-      width: 360px;
-    }
-    .boot-progress-label {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 10px;
-      font-size: 11px; letter-spacing: 0.06em;
-      color: var(--text-secondary);
-    }
-    .boot-progress-label span:last-child { color: var(--cyan); }
-
-    .boot-progress-track {
-      height: 2px;
-      background: var(--bg-card);
-      border-radius: 2px;
-      overflow: hidden;
-      position: relative;
-    }
-    .boot-progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--cyan), var(--purple));
-      border-radius: 2px;
-      width: 0%;
-      transition: width 300ms ease;
-      box-shadow: 0 0 12px var(--cyan-glow);
-    }
-
-    .boot-tasks {
-      margin-top: 32px;
-      width: 360px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .boot-task {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 11px; letter-spacing: 0.04em;
-      color: var(--text-muted);
-      transition: color var(--transition);
-    }
-    .boot-task.done   { color: var(--text-secondary); }
-    .boot-task.active { color: var(--cyan); }
-    .boot-task-icon { width: 16px; text-align: center; }
-
-    /* =============================================
-       SCREEN 2 — PROFILE SELECTION
+       SCREEN 1 — LANDING (spotlight hero)
     ============================================= */
     #screen-profile {
+      position: fixed; inset: 0;
+      background: #000;
+      overflow: hidden;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 0;
     }
 
-    .profile-header {
-      text-align: center;
-      margin-bottom: 56px;
-    }
-    .profile-header-eyebrow {
-      font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase;
-      color: var(--cyan); margin-bottom: 12px;
-    }
-    .profile-header h1 {
-      font-family: var(--font-display); font-size: 42px; font-weight: 800;
-      line-height: 1.05;
-      color: var(--text-primary);
-    }
-    .profile-header p {
-      margin-top: 12px; font-size: 13px;
-      color: var(--text-secondary); letter-spacing: 0.02em;
-    }
-
-    .profile-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 300px);
-      gap: 20px;
-    }
-
-    .profile-card {
-      position: relative;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 28px 24px 24px;
-      cursor: pointer;
-      transition: all var(--transition);
+    /* Animated spotlight blobs */
+    .spotlight-overlay {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      z-index: 0;
       overflow: hidden;
     }
-    .profile-card::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--card-accent, var(--cyan)), transparent);
-      opacity: 0;
-      transition: opacity var(--transition);
+    .spotlight-blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.18;
     }
-    .profile-card::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: radial-gradient(ellipse 200px 150px at 50% 0%, var(--card-accent-dim, var(--cyan-dim)) 0%, transparent 70%);
-      opacity: 0;
-      transition: opacity var(--transition);
-      pointer-events: none;
+    .spotlight-blob--left {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, #ffffff, transparent 70%);
+      top: 50%; left: 20%;
+      transform: translate(-50%, -50%);
+      animation: blobLeft 12s ease-in-out infinite alternate;
     }
-    .profile-card:hover {
-      background: var(--bg-card-hover);
-      border-color: var(--border-bright);
-      transform: translateY(-3px);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px var(--border-bright);
+    .spotlight-blob--mid {
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, #c0c0c0, transparent 70%);
+      top: 25%; left: 55%;
+      transform: translate(-50%, -50%);
+      animation: blobMid 15s ease-in-out 3s infinite alternate;
     }
-    .profile-card:hover::before { opacity: 1; }
-    .profile-card:hover::after  { opacity: 1; }
+    .spotlight-blob--right {
+      width: 520px; height: 520px;
+      background: radial-gradient(circle, #ffffff, transparent 70%);
+      top: 65%; left: 72%;
+      transform: translate(-50%, -50%);
+      animation: blobRight 18s ease-in-out 5s infinite alternate;
+    }
+    @keyframes blobLeft {
+      0%   { transform: translate(-50%, -50%) rotate(0deg); }
+      33%  { transform: translate(-30%, -70%) rotate(15deg); }
+      66%  { transform: translate(-70%, -30%) rotate(-15deg); }
+      100% { transform: translate(-50%, -50%) rotate(0deg); }
+    }
+    @keyframes blobMid {
+      0%   { transform: translate(-50%, -50%) rotate(-20deg); }
+      33%  { transform: translate(-30%, -20%) rotate(0deg); }
+      66%  { transform: translate(-70%, -40%) rotate(20deg); }
+      100% { transform: translate(-50%, -50%) rotate(-20deg); }
+    }
+    @keyframes blobRight {
+      0%   { transform: translate(-50%, -50%) rotate(10deg); }
+      33%  { transform: translate(-80%, -70%) rotate(-10deg); }
+      66%  { transform: translate(-40%, -30%) rotate(25deg); }
+      100% { transform: translate(-50%, -50%) rotate(10deg); }
+    }
 
-    .profile-card[data-id="adhd"]    { --card-accent: var(--cyan);   --card-accent-dim: var(--cyan-dim);  }
-    .profile-card[data-id="anxiety"] { --card-accent: var(--amber);  --card-accent-dim: var(--amber-dim); }
-    .profile-card[data-id="asd"]     { --card-accent: var(--purple); --card-accent-dim: rgba(168,85,247,0.1); }
-
-    .profile-card-tag {
-      font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
-      color: var(--card-accent, var(--cyan));
-      margin-bottom: 16px;
-      display: flex; align-items: center; gap: 6px;
+    /* Landing content */
+    .landing-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      max-width: 520px;
+      padding: 2rem;
+      animation: landingFadeUp 0.8s 0.2s both cubic-bezier(0.4,0,0.2,1);
     }
-    .profile-card-tag::before {
-      content: '';
-      display: block; width: 16px; height: 1px;
-      background: currentColor;
+    @keyframes landingFadeUp {
+      from { opacity: 0; transform: translateY(32px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
-    .profile-card h3 {
-      font-family: var(--font-display); font-size: 22px; font-weight: 700;
-      color: var(--text-primary);
+    /* Logo row */
+    .landing-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
       margin-bottom: 8px;
     }
-    .profile-card p {
-      font-size: 12px; line-height: 1.6;
-      color: var(--text-secondary);
-      margin-bottom: 20px;
+    .landing-logo-mark {
+      width: 42px; height: 42px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1rem; color: #fff;
+      flex-shrink: 0;
+    }
+    .landing-wordmark {
+      font-size: 2.25rem; font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+    }
+    .landing-subtitle {
+      color: rgba(255,255,255,0.5);
+      font-size: 1rem;
+      margin-bottom: 2rem;
     }
 
-    .profile-card-traits {
-      display: flex; flex-wrap: wrap; gap: 6px;
+    /* Config inputs */
+    .landing-config {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 1.5rem;
     }
-    .profile-trait {
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 10px; letter-spacing: 0.06em;
+    .landing-api-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #f5f5f7;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      width: 100%;
+      outline: none;
+      font-family: inherit;
+      letter-spacing: 0.02em;
+      transition: border-color 180ms;
+    }
+    .landing-api-input:focus { border-color: rgba(255,255,255,0.25); }
+    .landing-api-input::placeholder { color: rgba(255,255,255,0.25); }
+
+    /* Profile cards */
+    .landing-profiles {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+    .profile-card {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 1.1rem 1.25rem;
       background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: var(--text-secondary);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      backdrop-filter: blur(8px);
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .profile-card:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.18);
+      transform: scale(1.02);
+    }
+    .profile-card:active { transform: scale(0.98); }
+
+    .profile-card-icon {
+      font-size: 1.4rem;
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      flex-shrink: 0;
+      filter: grayscale(1);
+    }
+    .profile-card-body { display: flex; flex-direction: column; gap: 2px; }
+    .profile-card-tag {
+      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      font-weight: 600;
+    }
+    .profile-card h3 {
+      font-size: 1.05rem; font-weight: 700;
+      color: #fff;
+    }
+    .profile-card p {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.4);
     }
 
-    .profile-card-arrow {
-      position: absolute; bottom: 24px; right: 24px;
-      font-size: 18px; color: var(--card-accent, var(--cyan));
-      opacity: 0; transform: translateX(-6px);
-      transition: all var(--transition);
+    .landing-footnote {
+      color: rgba(255,255,255,0.2);
+      font-size: 0.72rem;
+      margin-top: 1.75rem;
+      max-width: 380px;
     }
-    .profile-card:hover .profile-card-arrow { opacity: 1; transform: translateX(0); }
+
+    /* Force B&W on the demo switch inside the landing screen */
+    #screen-profile .demo-switch-row {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.12);
+    }
+    #screen-profile .demo-switch-label {
+      color: rgba(255,255,255,0.45);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px;
+    }
+    #screen-profile .demo-switch-slider {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.15);
+    }
+    #screen-profile .demo-switch-slider::before {
+      background: rgba(255,255,255,0.3);
+    }
+    #screen-profile .demo-switch input:checked + .demo-switch-slider {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.4);
+    }
+    #screen-profile .demo-switch input:checked + .demo-switch-slider::before {
+      background: #fff;
+      box-shadow: 0 0 8px rgba(255,255,255,0.4);
+    }
 
     /* =============================================
        SCREEN 3 — CALIBRATION
@@ -1451,17 +1473,6 @@
       backdrop-filter: blur(24px) !important;
     }
 
-    /* Boot screen: clean up the gradient bar */
-    .boot-progress-bar {
-      background: var(--accent) !important;
-      box-shadow: none !important;
-    }
-    /* Boot logo: use accent color */
-    .boot-logo-inner {
-      color: var(--accent) !important;
-      text-shadow: none !important;
-    }
-
     /* Topbar profile chip: accent color */
     .topbar-profile-chip {
       background: var(--accent-dim) !important;
@@ -1715,107 +1726,68 @@
   <!-- ==========================================
        SCREEN 1: LOADING / BOOT
   =========================================== -->
-  <div id="screen-loading" class="screen active">
-    <div class="boot-logo">
-      <div class="boot-logo-mark">
-        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="40" cy="40" r="36" stroke="rgba(41,151,255,0.15)" stroke-width="1.5"/>
-          <circle cx="40" cy="40" r="36" stroke="url(#bootGrad)" stroke-width="1.5"
-            stroke-dasharray="60 166" stroke-linecap="round"/>
-          <circle cx="40" cy="40" r="28" stroke="rgba(41,151,255,0.07)" stroke-width="1"/>
-          <defs>
-            <linearGradient id="bootGrad" x1="0" y1="0" x2="80" y2="80" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#2997ff"/>
-              <stop offset="100%" stop-color="#bf5af2"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <div class="boot-logo-inner">AQ</div>
-      </div>
-      <div>
-        <div class="boot-title">AdaptIQ</div>
-        <div class="boot-subtitle">Adaptive Learning Intelligence</div>
-      </div>
-    </div>
-
-    <div class="boot-progress-wrap">
-      <div class="boot-progress-label">
-        <span id="boot-task-label">Initializing systems…</span>
-        <span id="boot-pct">0%</span>
-      </div>
-      <div class="boot-progress-track">
-        <div class="boot-progress-bar" id="boot-progress-bar"></div>
-      </div>
-
-      <div class="boot-tasks" id="boot-tasks">
-        <div class="boot-task" id="task-models">
-          <span class="boot-task-icon">○</span>
-          <span>Loading AI models</span>
-        </div>
-        <div class="boot-task" id="task-camera">
-          <span class="boot-task-icon">○</span>
-          <span>Requesting camera access</span>
-        </div>
-        <div class="boot-task" id="task-audio">
-          <span class="boot-task-icon">○</span>
-          <span>Initializing audio analysis</span>
-        </div>
-        <div class="boot-task" id="task-gaze">
-          <span class="boot-task-icon">○</span>
-          <span>Calibrating gaze tracking</span>
-        </div>
-        <div class="boot-task" id="task-ready">
-          <span class="boot-task-icon">○</span>
-          <span>Ready</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ==========================================
-       SCREEN 2: PROFILE SELECTION
+       SCREEN 1: LANDING / PROFILE SELECTION
   =========================================== -->
-  <div id="screen-profile" class="screen">
-    <div class="profile-header">
-      <div class="profile-header-eyebrow">Step 1 of 2 — Select Learning Profile</div>
-      <h1>Who are we<br>adapting for?</h1>
-      <p>Choose the profile that best matches the learner's needs.<br>AdaptIQ will tailor all interventions and sensitivity thresholds accordingly.</p>
+  <div id="screen-profile" class="screen active">
+    <!-- Animated spotlight blobs -->
+    <div class="spotlight-overlay">
+      <div class="spotlight-blob spotlight-blob--left"></div>
+      <div class="spotlight-blob spotlight-blob--mid"></div>
+      <div class="spotlight-blob spotlight-blob--right"></div>
     </div>
 
-    <div style="text-align:center;margin-bottom:20px;">
-      <input id="api-key-input" type="password"
-             placeholder="Claude API Key (optional — enables AI responses)"
-             style="background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);color:#f5f5f7;
-                    padding:12px 18px;border-radius:10px;font-size:14px;width:360px;
-                    outline:none;font-family:inherit;letter-spacing:0.02em;" />
-    </div>
+    <div class="landing-content">
+      <!-- Logo -->
+      <div class="landing-logo">
+        <div class="landing-logo-mark">AQ</div>
+        <h1 class="landing-wordmark">AdaptIQ</h1>
+      </div>
 
-    <div style="text-align:center;margin-bottom:28px;">
-      <label class="demo-switch-row">
-        <span class="demo-switch-label">⚡ Demo Mode — fast calibration, short cooldowns</span>
-        <span class="demo-switch">
-          <input type="checkbox" id="demo-mode-toggle">
-          <span class="demo-switch-slider"></span>
-        </span>
-      </label>
-    </div>
+      <p class="landing-subtitle">Who are we adapting for?</p>
 
-    <div class="profile-selector">
-      <div class="profile-card" data-id="adhd">
-        <div class="profile-card-tag">Attention</div>
-        <h3>ADHD</h3>
-        <p>Focus &amp; engagement</p>
+      <!-- Config -->
+      <div class="landing-config">
+        <input id="api-key-input" type="password" class="landing-api-input"
+               placeholder="Claude API Key (optional — enables AI responses)" />
+        <label class="demo-switch-row">
+          <span class="demo-switch-label">⚡ Demo Mode — fast calibration, short cooldowns</span>
+          <span class="demo-switch">
+            <input type="checkbox" id="demo-mode-toggle">
+            <span class="demo-switch-slider"></span>
+          </span>
+        </label>
       </div>
-      <div class="profile-card" data-id="anxiety">
-        <div class="profile-card-tag">Regulation</div>
-        <h3>Anxiety</h3>
-        <p>Calm &amp; clarity</p>
+
+      <!-- Profile cards -->
+      <div class="landing-profiles">
+        <div class="profile-card" data-id="adhd">
+          <div class="profile-card-icon">⚡</div>
+          <div class="profile-card-body">
+            <div class="profile-card-tag">Attention</div>
+            <h3>ADHD</h3>
+            <p>Focus &amp; engagement</p>
+          </div>
+        </div>
+        <div class="profile-card" data-id="anxiety">
+          <div class="profile-card-icon">🌿</div>
+          <div class="profile-card-body">
+            <div class="profile-card-tag">Regulation</div>
+            <h3>Anxiety</h3>
+            <p>Calm &amp; clarity</p>
+          </div>
+        </div>
+        <div class="profile-card" data-id="asd">
+          <div class="profile-card-icon">🔷</div>
+          <div class="profile-card-body">
+            <div class="profile-card-tag">Structure</div>
+            <h3>ASD</h3>
+            <p>Order &amp; progress</p>
+          </div>
+        </div>
       </div>
-      <div class="profile-card" data-id="asd">
-        <div class="profile-card-tag">Structure</div>
-        <h3>ASD</h3>
-        <p>Order &amp; progress</p>
-      </div>
+
+      <p class="landing-footnote">AdaptIQ will tailor all interventions and sensitivity thresholds to the selected profile.</p>
     </div>
   </div>
 
