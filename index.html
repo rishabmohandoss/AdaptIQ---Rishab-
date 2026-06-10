@@ -160,7 +160,7 @@
       position: absolute;
       border-radius: 50%;
       filter: blur(90px);
-      opacity: 0.18;
+      opacity: 0.08;
     }
     .spotlight-blob--left {
       width: 600px; height: 600px;
@@ -202,17 +202,15 @@
       100% { transform: translate(-50%, -50%) rotate(10deg); }
     }
 
-    /* Landing content */
+    /* Landing content — minimal full-bleed layout */
     .landing-content {
       position: relative;
       z-index: 1;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      text-align: center;
       width: 100%;
-      max-width: 520px;
-      padding: 2rem;
+      height: 100%;
+      padding: 28px 36px;
       animation: landingFadeUp 0.8s 0.2s both cubic-bezier(0.4,0,0.2,1);
     }
     @keyframes landingFadeUp {
@@ -220,144 +218,613 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* Logo row */
-    .landing-logo {
-      display: inline-flex;
+    /* Top bar: logo left, API key box right */
+    .landing-topbar {
+      display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .landing-topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     .landing-logo-mark {
-      width: 42px; height: 42px;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.18);
-      border-radius: 10px;
+      height: 32px;
+      padding: 0 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 7px;
       display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 1rem; color: #fff;
+      font-weight: 700; font-size: 12px; letter-spacing: 0.14em;
+      color: #fff;
       flex-shrink: 0;
     }
-    .landing-wordmark {
-      font-size: 2.25rem; font-weight: 800;
-      color: #ffffff;
-      letter-spacing: -0.02em;
+    .landing-demo-chip {
+      height: 32px; width: 36px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 7px;
+      cursor: pointer;
+      color: rgba(255,255,255,0.45);
+      font-size: 14px;
+      transition: all 180ms;
+      user-select: none;
     }
-    .landing-subtitle {
-      color: rgba(255,255,255,0.5);
-      font-size: 1rem;
-      margin-bottom: 2rem;
+    .landing-demo-chip:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+    .landing-demo-chip input { display: none; }
+    .landing-demo-chip:has(input:checked) {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
     }
-
-    /* Config inputs */
-    .landing-config {
+    /* Profile / account dropdown */
+    .landing-account { position: relative; }
+    .landing-account-btn {
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid rgba(255,255,255,0.85);
+      border-radius: 4px;
+      background: transparent;
+      color: #fff;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 180ms, color 180ms;
+    }
+    .landing-account-btn:hover,
+    .landing-account.open .landing-account-btn {
+      background: #fff;
+      color: #000;
+    }
+    .landing-account-avatar {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid currentColor;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px;
+      flex-shrink: 0;
+    }
+    .landing-account-caret { font-size: 8px; opacity: 0.7; }
+
+    .landing-account-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 280px;
+      background: rgba(20,20,22,0.97);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 6px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
+      transition: opacity 180ms, transform 180ms;
+      z-index: 50;
+    }
+    .landing-account.open .landing-account-menu {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+    .landing-account-header {
+      display: flex;
       align-items: center;
       gap: 12px;
+      padding: 12px;
+    }
+    .landing-account-header-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .landing-account-name {
+      font-size: 13px; font-weight: 600; color: #fff;
+    }
+    .landing-account-sub {
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      margin-top: 2px;
+    }
+    .landing-account-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+      margin: 4px 8px;
+    }
+    .landing-account-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       width: 100%;
-      margin-bottom: 1.5rem;
+      padding: 10px 12px;
+      border: none;
+      background: transparent;
+      border-radius: 5px;
+      color: rgba(255,255,255,0.7);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-align: left;
+      cursor: pointer;
+      transition: background 140ms, color 140ms;
+    }
+    .landing-account-item:hover {
+      background: rgba(255,255,255,0.07);
+      color: #fff;
+    }
+    .landing-account-item .value {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+    }
+    .landing-account-apikey {
+      padding: 8px 12px 12px;
+    }
+    .landing-account-apikey-label {
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 6px;
     }
     .landing-api-input {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #f5f5f7;
-      padding: 12px 18px;
-      border-radius: 10px;
-      font-size: 14px;
       width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 5px;
+      padding: 8px 10px;
       outline: none;
+      color: #f5f5f7;
       font-family: inherit;
-      letter-spacing: 0.02em;
+      font-size: 11px;
+      letter-spacing: 0.04em;
       transition: border-color 180ms;
     }
-    .landing-api-input:focus { border-color: rgba(255,255,255,0.25); }
+    .landing-api-input:focus { border-color: rgba(255,255,255,0.3); }
     .landing-api-input::placeholder { color: rgba(255,255,255,0.25); }
 
-    /* Profile cards */
+    /* Split layout: job description left, mode cards right */
+    .landing-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      flex: 1;
+      min-height: 0;
+      padding-top: 40px;
+      max-width: 1240px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .landing-left,
+    .landing-right {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .landing-wordmark {
+      font-size: clamp(2.4rem, 4vw, 3.4rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #fff;
+      line-height: 1;
+    }
+    .landing-tagline {
+      margin-top: 10px;
+      color: rgba(255,255,255,0.35);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+
+    .landing-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      margin: 32px 0 12px;
+    }
+    .landing-right .landing-section-label { margin-top: 0; }
+
+    .landing-jd-input {
+      flex: 1;
+      min-height: 140px;
+      resize: none;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 6px;
+      padding: 16px 18px;
+      color: #f5f5f7;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.6;
+      outline: none;
+      transition: border-color 180ms, background 180ms;
+    }
+    .landing-jd-input:focus {
+      border-color: rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.05);
+    }
+    .landing-jd-input::placeholder { color: rgba(255,255,255,0.25); }
+
+    /* Resume upload dropzone */
+    .landing-resume-zone {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 14px;
+      padding: 14px 18px;
+      border: 1px dashed rgba(255,255,255,0.2);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 180ms, background 180ms;
+    }
+    .landing-resume-zone:hover {
+      border-color: rgba(255,255,255,0.45);
+      background: rgba(255,255,255,0.03);
+    }
+    .landing-resume-zone input { display: none; }
+    .landing-resume-text {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+    }
+    .landing-resume-zone.has-file .landing-resume-text { color: #fff; }
+    .landing-resume-btn {
+      flex-shrink: 0;
+      padding: 7px 14px;
+      border: 1px solid rgba(255,255,255,0.85);
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    /* Profile cards — stacked numbered rows */
     .landing-profiles {
       display: flex;
       flex-direction: column;
       gap: 12px;
-      width: 100%;
+      flex: 1;
+      min-height: 0;
     }
     .profile-card {
+      position: relative;
       display: flex;
       align-items: center;
-      gap: 1.25rem;
-      padding: 1.1rem 1.25rem;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 14px;
+      flex: 1;
+      min-height: 88px;
+      padding: 20px 24px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 6px;
       cursor: pointer;
       text-align: left;
-      width: 100%;
       backdrop-filter: blur(8px);
-      transition: background 0.2s, border-color 0.2s, transform 0.15s;
-      position: relative;
       overflow: hidden;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
     }
     .profile-card:hover {
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(255,255,255,0.18);
-      transform: scale(1.02);
-    }
-    .profile-card:active { transform: scale(0.98); }
-
-    .profile-card-icon {
-      font-size: 1.4rem;
-      width: 44px; height: 44px;
-      display: flex; align-items: center; justify-content: center;
       background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 10px;
-      flex-shrink: 0;
-      filter: grayscale(1);
+      border-color: rgba(255,255,255,0.16);
+      transform: translateX(4px);
     }
-    .profile-card-body { display: flex; flex-direction: column; gap: 2px; }
+    .profile-card:active { transform: scale(0.99); }
+
+    .profile-card-number {
+      width: 72px;
+      flex-shrink: 0;
+      font-size: clamp(2.2rem, 3.4vw, 3rem);
+      font-weight: 400;
+      line-height: 1;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
     .profile-card-tag {
-      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
-      color: rgba(255,255,255,0.35);
+      font-size: 9px;
       font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.4);
+      white-space: pre-line;
     }
     .profile-card h3 {
-      font-size: 1.05rem; font-weight: 700;
+      margin-left: auto;
+      font-size: clamp(1.1rem, 1.6vw, 1.4rem);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
       color: #fff;
-    }
-    .profile-card p {
-      font-size: 0.82rem;
-      color: rgba(255,255,255,0.4);
     }
 
     .landing-footnote {
-      color: rgba(255,255,255,0.2);
-      font-size: 0.72rem;
-      margin-top: 1.75rem;
-      max-width: 380px;
+      text-align: center;
+      color: rgba(255,255,255,0.18);
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      padding-top: 20px;
     }
 
-    /* Force B&W on the demo switch inside the landing screen */
-    #screen-profile .demo-switch-row {
-      background: rgba(255,255,255,0.04);
-      border-color: rgba(255,255,255,0.12);
+    /* =============================================
+       SCREEN 2 — INTERVIEW SETUP (question builder)
+    ============================================= */
+    #screen-setup {
+      background: #000;
+      overflow: hidden;
     }
-    #screen-profile .demo-switch-label {
-      color: rgba(255,255,255,0.45);
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 12px;
+    .setup-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      padding: 28px 36px;
     }
-    #screen-profile .demo-switch-slider {
-      background: rgba(255,255,255,0.04);
-      border-color: rgba(255,255,255,0.15);
+    .setup-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
-    #screen-profile .demo-switch-slider::before {
-      background: rgba(255,255,255,0.3);
+    .setup-back {
+      display: flex; align-items: center; gap: 8px;
+      height: 32px; padding: 0 12px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 7px;
+      color: rgba(255,255,255,0.6);
+      font-family: inherit;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      cursor: pointer;
+      transition: all 180ms;
     }
-    #screen-profile .demo-switch input:checked + .demo-switch-slider {
-      background: rgba(255,255,255,0.1);
-      border-color: rgba(255,255,255,0.4);
+    .setup-back:hover { border-color: rgba(255,255,255,0.5); color: #fff; }
+    .setup-mode-chip {
+      height: 32px; padding: 0 14px;
+      display: flex; align-items: center;
+      border: 1px solid rgba(255,255,255,0.85);
+      border-radius: 4px;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: #fff;
     }
-    #screen-profile .demo-switch input:checked + .demo-switch-slider::before {
+
+    .setup-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      flex: 1;
+      min-height: 0;
+      padding-top: 36px;
+      max-width: 1240px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .setup-col { display: flex; flex-direction: column; min-height: 0; }
+
+    .setup-heading {
+      font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #fff;
+      line-height: 1.15;
+    }
+    .setup-sub {
+      margin-top: 8px;
+      color: rgba(255,255,255,0.35);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.22em; text-transform: uppercase;
+    }
+
+    .setup-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .setup-input {
+      width: 100%;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 6px;
+      padding: 12px 14px;
+      color: #f5f5f7;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 180ms, background 180ms;
+    }
+    .setup-input:focus { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.05); }
+    .setup-input::placeholder { color: rgba(255,255,255,0.25); }
+    textarea.setup-input { flex: 1; min-height: 100px; resize: none; line-height: 1.6; }
+
+    /* Question-type toggle chips */
+    .setup-types {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .setup-type-chip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.18s, border-color 0.18s;
+    }
+    .setup-type-chip:hover { border-color: rgba(255,255,255,0.2); }
+    .setup-type-chip input { display: none; }
+    .setup-type-chip .box {
+      width: 14px; height: 14px;
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 3px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: #000;
+      transition: all 0.18s;
+    }
+    .setup-type-chip:has(input:checked) {
+      background: rgba(255,255,255,0.09);
+      border-color: rgba(255,255,255,0.35);
+    }
+    .setup-type-chip:has(input:checked) .box { background: #fff; border-color: #fff; }
+    .setup-type-chip:has(input:checked) .box::after { content: '✓'; }
+    .setup-type-name {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.8);
+    }
+
+    /* Question count stepper */
+    .setup-count-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 6px;
+    }
+    .setup-count-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.8);
+    }
+    .setup-stepper { display: flex; align-items: center; gap: 14px; }
+    .setup-stepper button {
+      width: 26px; height: 26px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 5px;
+      color: #fff; font-size: 13px;
+      cursor: pointer;
+      transition: all 140ms;
+    }
+    .setup-stepper button:hover { border-color: #fff; }
+    .setup-stepper .num { font-size: 16px; font-weight: 500; color: #fff; min-width: 24px; text-align: center; }
+
+    .setup-generate-btn {
+      margin-top: 16px;
+      padding: 14px;
+      width: 100%;
       background: #fff;
-      box-shadow: 0 0 8px rgba(255,255,255,0.4);
+      border: 1px solid #fff;
+      border-radius: 6px;
+      color: #000;
+      font-family: inherit;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      cursor: pointer;
+      transition: all 180ms;
+    }
+    .setup-generate-btn:hover { background: transparent; color: #fff; }
+    .setup-generate-btn:disabled { opacity: 0.4; cursor: wait; }
+
+    /* Generated questions list */
+    .setup-questions {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 4px;
+    }
+    .setup-questions::-webkit-scrollbar { width: 4px; }
+    .setup-questions::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+    .setup-q-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed rgba(255,255,255,0.12);
+      border-radius: 6px;
+      color: rgba(255,255,255,0.25);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      text-align: center;
+      padding: 20px;
+      line-height: 2;
+    }
+    .setup-q-item {
+      display: flex;
+      gap: 16px;
+      align-items: baseline;
+      padding: 13px 16px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 6px;
+      animation: qItemIn 0.4s both cubic-bezier(0.4,0,0.2,1);
+    }
+    @keyframes qItemIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .setup-q-num {
+      font-size: 18px; font-weight: 400; color: #fff;
+      min-width: 26px;
+    }
+    .setup-q-body { flex: 1; }
+    .setup-q-cat {
+      font-size: 8px; font-weight: 600;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 3px;
+    }
+    .setup-q-text { font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.5; }
+
+    .setup-start-btn {
+      margin-top: 14px;
+      padding: 14px;
+      width: 100%;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.85);
+      border-radius: 6px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      cursor: pointer;
+      transition: all 180ms;
+      display: none;
+    }
+    .setup-start-btn.visible { display: block; }
+    .setup-start-btn:hover { background: #fff; color: #000; }
+
+    .setup-error {
+      margin-top: 10px;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.45);
+      text-align: center;
+      display: none;
     }
 
     /* =============================================
@@ -1678,58 +2145,374 @@
     </div>
 
     <div class="landing-content">
-      <!-- Logo -->
-      <div class="landing-logo">
-        <div class="landing-logo-mark">AQ</div>
-        <h1 class="landing-wordmark">AdaptIQ</h1>
-      </div>
-
-      <p class="landing-subtitle">Who are we adapting for?</p>
-
-      <!-- Config -->
-      <div class="landing-config">
-        <input id="api-key-input" type="password" class="landing-api-input"
-               placeholder="Claude API Key (optional — enables AI responses)" />
-        <label class="demo-switch-row">
-          <span class="demo-switch-label">⚡ Demo Mode — fast calibration, short cooldowns</span>
-          <span class="demo-switch">
+      <!-- Top bar -->
+      <div class="landing-topbar">
+        <div class="landing-topbar-left">
+          <label class="landing-demo-chip" title="Demo Mode — fast calibration, short cooldowns">
             <input type="checkbox" id="demo-mode-toggle">
-            <span class="demo-switch-slider"></span>
-          </span>
-        </label>
+            <span>⚡</span>
+          </label>
+        </div>
+        <div class="landing-account" id="account-dropdown">
+          <button class="landing-account-btn" id="account-btn" type="button">
+            <span class="landing-account-avatar">G</span>
+            Profile
+            <span class="landing-account-caret">▼</span>
+          </button>
+          <div class="landing-account-menu">
+            <div class="landing-account-header">
+              <div class="landing-account-header-avatar">G</div>
+              <div>
+                <div class="landing-account-name">Guest</div>
+                <div class="landing-account-sub">Not signed in</div>
+              </div>
+            </div>
+            <div class="landing-account-divider"></div>
+            <button class="landing-account-item" type="button">
+              Selected Profile <span class="value" id="account-selected-profile">None</span>
+            </button>
+            <button class="landing-account-item" type="button">Account Settings</button>
+            <button class="landing-account-item" type="button">Preferences</button>
+            <div class="landing-account-divider"></div>
+            <div class="landing-account-apikey">
+              <div class="landing-account-apikey-label">Claude API Key</div>
+              <input id="api-key-input" type="password" class="landing-api-input"
+                     placeholder="sk-ant-…  (optional — enables AI responses)" />
+            </div>
+            <div class="landing-account-divider"></div>
+            <button class="landing-account-item" type="button">Sign In</button>
+          </div>
+        </div>
       </div>
 
-      <!-- Profile cards -->
-      <div class="landing-profiles">
-        <div class="profile-card" data-id="adhd">
-          <div class="profile-card-icon">⚡</div>
-          <div class="profile-card-body">
-            <div class="profile-card-tag">Attention</div>
-            <h3>ADHD</h3>
-            <p>Focus &amp; engagement</p>
-          </div>
+      <div class="landing-split">
+        <!-- LEFT: wordmark + job description + resume upload -->
+        <div class="landing-left">
+          <h1 class="landing-wordmark">AdaptIQ</h1>
+          <p class="landing-tagline">Adaptive Learning Intelligence</p>
+
+          <div class="landing-section-label">Job Description</div>
+          <textarea id="job-description-input" class="landing-jd-input"
+                    placeholder="Paste the job description here…"></textarea>
+
+          <label class="landing-resume-zone" id="resume-zone">
+            <input type="file" id="resume-upload" accept=".pdf,.doc,.docx,.txt">
+            <span class="landing-resume-text" id="resume-zone-text">Drop your resume here or browse</span>
+            <span class="landing-resume-btn">Upload Resume</span>
+          </label>
         </div>
-        <div class="profile-card" data-id="anxiety">
-          <div class="profile-card-icon">🌿</div>
-          <div class="profile-card-body">
-            <div class="profile-card-tag">Regulation</div>
-            <h3>Anxiety</h3>
-            <p>Calm &amp; clarity</p>
-          </div>
-        </div>
-        <div class="profile-card" data-id="asd">
-          <div class="profile-card-icon">🔷</div>
-          <div class="profile-card-body">
-            <div class="profile-card-tag">Structure</div>
-            <h3>ASD</h3>
-            <p>Order &amp; progress</p>
+
+        <!-- RIGHT: mode selection -->
+        <div class="landing-right">
+          <div class="landing-section-label">Select a Mode</div>
+          <div class="landing-profiles">
+            <div class="profile-card" data-id="adhd">
+              <div class="profile-card-number">1</div>
+              <div class="profile-card-tag">Focus
+Engagement</div>
+              <h3>ADHD</h3>
+            </div>
+            <div class="profile-card" data-id="anxiety">
+              <div class="profile-card-number">2</div>
+              <div class="profile-card-tag">Calm
+Clarity</div>
+              <h3>Anxiety</h3>
+            </div>
+            <div class="profile-card" data-id="asd">
+              <div class="profile-card-number">3</div>
+              <div class="profile-card-tag">Order
+Progress</div>
+              <h3>ASD</h3>
+            </div>
           </div>
         </div>
       </div>
 
-      <p class="landing-footnote">AdaptIQ will tailor all interventions and sensitivity thresholds to the selected profile.</p>
+      <p class="landing-footnote">AdaptIQ tailors all interventions and sensitivity thresholds to the selected profile.</p>
+      <script>
+        (() => {
+          const dd  = document.getElementById('account-dropdown');
+          const btn = document.getElementById('account-btn');
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dd.classList.toggle('open');
+          });
+          document.addEventListener('click', (e) => {
+            if (!dd.contains(e.target)) dd.classList.remove('open');
+          });
+          document.querySelectorAll('.profile-card').forEach(card => {
+            card.addEventListener('click', () => {
+              document.getElementById('account-selected-profile').textContent =
+                card.dataset.id.toUpperCase();
+            });
+          });
+        })();
+        document.getElementById('resume-upload').addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          const zone = document.getElementById('resume-zone');
+          const text = document.getElementById('resume-zone-text');
+          if (file) { text.textContent = file.name; zone.classList.add('has-file'); }
+          else      { text.textContent = 'Drop your resume here or browse'; zone.classList.remove('has-file'); }
+        });
+      </script>
     </div>
   </div>
+
+  <!-- ==========================================
+       SCREEN 2: INTERVIEW SETUP / QUESTION BUILDER
+  =========================================== -->
+  <div id="screen-setup" class="screen">
+    <div class="setup-content">
+      <!-- Top bar -->
+      <div class="setup-topbar">
+        <button class="setup-back" id="setup-back-btn" type="button">← Back</button>
+        <div class="setup-mode-chip" id="setup-mode-chip">Mode: —</div>
+      </div>
+
+      <div class="setup-split">
+        <!-- LEFT: job specifics + question config -->
+        <div class="setup-col">
+          <h2 class="setup-heading">Build your interview</h2>
+          <p class="setup-sub">Tailored questions, generated for you</p>
+
+          <div class="landing-section-label">Job Specifics</div>
+          <div class="setup-field-row">
+            <input id="setup-role" class="setup-input" placeholder="Role title — e.g. Data Analyst Intern">
+            <input id="setup-company" class="setup-input" placeholder="Company — e.g. Prudential">
+          </div>
+          <div style="height:12px"></div>
+          <textarea id="setup-notes" class="setup-input"
+                    placeholder="Anything else? Team, tech stack, responsibilities, what you're nervous about…"></textarea>
+
+          <div class="landing-section-label">Question Types</div>
+          <div class="setup-types">
+            <label class="setup-type-chip"><input type="checkbox" value="Background" checked><span class="box"></span><span class="setup-type-name">Background</span></label>
+            <label class="setup-type-chip"><input type="checkbox" value="Behavioral" checked><span class="box"></span><span class="setup-type-name">Behavioral</span></label>
+            <label class="setup-type-chip"><input type="checkbox" value="Technical"><span class="box"></span><span class="setup-type-name">Technical</span></label>
+            <label class="setup-type-chip"><input type="checkbox" value="Situational"><span class="box"></span><span class="setup-type-name">Situational</span></label>
+            <label class="setup-type-chip"><input type="checkbox" value="Strengths & Growth"><span class="box"></span><span class="setup-type-name">Strengths &amp; Growth</span></label>
+            <label class="setup-type-chip"><input type="checkbox" value="Closing" checked><span class="box"></span><span class="setup-type-name">Closing</span></label>
+          </div>
+
+          <div style="height:12px"></div>
+          <div class="setup-count-row">
+            <span class="setup-count-label">Number of Questions</span>
+            <div class="setup-stepper">
+              <button type="button" id="setup-count-minus">−</button>
+              <span class="num" id="setup-count">8</span>
+              <button type="button" id="setup-count-plus">+</button>
+            </div>
+          </div>
+
+          <button class="setup-generate-btn" id="setup-generate-btn" type="button">Generate Questions</button>
+          <div class="setup-error" id="setup-error"></div>
+        </div>
+
+        <!-- RIGHT: generated questions -->
+        <div class="setup-col">
+          <div class="landing-section-label">Your Questions</div>
+          <div class="setup-questions" id="setup-questions">
+            <div class="setup-q-empty">Configure on the left,<br>then generate your custom question set</div>
+          </div>
+          <button class="setup-start-btn" id="setup-start-btn" type="button">Start Interview →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // ── Interview setup: question generation ──
+  (() => {
+    const FALLBACK_BANK = {
+      'Background': [
+        { q: 'Tell me about yourself.' },
+        { q: 'Walk me through your resume.' },
+        { q: 'Why did you choose your major or field of study?' },
+        { q: 'What drew you to apply for the {role} position?' },
+        { q: 'What do you know about {company}?' },
+      ],
+      'Behavioral': [
+        { q: 'Tell me about a time you worked on a team. What was your role?' },
+        { q: 'Describe a time you had to learn something new quickly.' },
+        { q: 'Tell me about a mistake you made and what you learned from it.' },
+        { q: 'Describe a time you took initiative without being asked.' },
+        { q: 'How do you handle disagreements with teammates?' },
+      ],
+      'Technical': [
+        { q: 'Walk me through a project you built. What were the key technical decisions?' },
+        { q: 'What tools or technologies are you most comfortable with, and why?' },
+        { q: 'How would you approach a problem you have never seen before in a {role} role?' },
+        { q: 'Describe a technical challenge you hit recently and how you debugged it.' },
+        { q: 'How do you decide when your work is good enough to ship or submit?' },
+      ],
+      'Situational': [
+        { q: 'Imagine you have multiple deadlines at once. How do you prioritize?' },
+        { q: 'What would you do if you were assigned a task with unclear instructions?' },
+        { q: 'If a teammate was not contributing, how would you handle it?' },
+        { q: 'How would you respond if your manager gave you critical feedback?' },
+      ],
+      'Strengths & Growth': [
+        { q: 'What is one of your strengths? Give a concrete example.' },
+        { q: 'What is one area you are actively working to improve?' },
+        { q: 'Where do you see yourself in five years?' },
+        { q: 'What kind of work environment helps you do your best work?' },
+      ],
+      'Closing': [
+        { q: 'Why should we hire you for this position?' },
+        { q: 'What are your salary expectations?' },
+        { q: 'Do you have any questions for us?' },
+      ],
+    };
+
+    let count = 8;
+    let generated = [];
+
+    const $ = (id) => document.getElementById(id);
+
+    // Show selected mode in the chip when arriving from screen 1
+    document.querySelectorAll('.profile-card').forEach(card => {
+      card.addEventListener('click', () => {
+        $('setup-mode-chip').textContent = `Mode: ${card.dataset.id.toUpperCase()}`;
+      });
+    });
+
+    $('setup-back-btn').addEventListener('click', () => window.AdaptIQ_UI.showScreen('profile'));
+
+    $('setup-count-minus').addEventListener('click', () => { count = Math.max(3, count - 1); $('setup-count').textContent = count; });
+    $('setup-count-plus').addEventListener('click', () => { count = Math.min(30, count + 1); $('setup-count').textContent = count; });
+
+    function selectedTypes() {
+      return [...document.querySelectorAll('.setup-type-chip input:checked')].map(i => i.value);
+    }
+
+    function fillTokens(q, role, company) {
+      return q
+        .replace('{role}', role || 'this')
+        .replace('{company}', company || 'our company');
+    }
+
+    function fallbackGenerate(types, role, company) {
+      const pool = [];
+      types.forEach(t => (FALLBACK_BANK[t] || []).forEach(item =>
+        pool.push({ cat: t, q: fillTokens(item.q, role, company) })));
+      // Interleave categories so the set feels like a real interview arc
+      const byCat = types.map(t => pool.filter(p => p.cat === t));
+      const out = [];
+      let i = 0;
+      while (out.length < count && byCat.some(c => c.length)) {
+        const c = byCat[i % byCat.length];
+        if (c.length) out.push(c.shift());
+        i++;
+      }
+      return out;
+    }
+
+    async function claudeGenerate(apiKey, types, role, company, notes, jd, profile) {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 3000,
+          messages: [{
+            role: 'user',
+            content: `You are an interview coach preparing practice questions for a neurodivergent job seeker (support profile: ${profile || 'general'}). Generate exactly ${count} interview questions tailored to this job.
+
+Role: ${role || 'not specified'}
+Company: ${company || 'not specified'}
+Job description: ${jd || 'not provided'}
+Additional notes from the candidate: ${notes || 'none'}
+
+Only use these question types: ${types.join(', ')}.
+Order them like a real interview (background first, closing last). Keep each question clear, concrete, and one sentence — no compound multi-part questions, no jargon.
+
+Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q": "<question>"}`,
+          }],
+        }),
+      });
+      if (!resp.ok) throw new Error(`API ${resp.status}`);
+      const json = await resp.json();
+      const text = json.content?.[0]?.text || '';
+      const match = text.match(/\[[\s\S]*\]/);
+      if (!match) throw new Error('No JSON in response');
+      const arr = JSON.parse(match[0]).filter(x => x && x.q);
+      if (!arr.length) throw new Error('Empty question list');
+      return arr.slice(0, count);
+    }
+
+    function renderQuestions(list) {
+      const box = $('setup-questions');
+      box.innerHTML = '';
+      list.forEach((item, idx) => {
+        const el = document.createElement('div');
+        el.className = 'setup-q-item';
+        el.style.animationDelay = `${idx * 60}ms`;
+        el.innerHTML = `
+          <div class="setup-q-num">${idx + 1}</div>
+          <div class="setup-q-body">
+            <div class="setup-q-cat"></div>
+            <div class="setup-q-text"></div>
+          </div>`;
+        el.querySelector('.setup-q-cat').textContent  = item.cat || 'Custom';
+        el.querySelector('.setup-q-text').textContent = item.q;
+        box.appendChild(el);
+      });
+      $('setup-start-btn').classList.add('visible');
+    }
+
+    $('setup-generate-btn').addEventListener('click', async () => {
+      const types = selectedTypes();
+      const err = $('setup-error');
+      err.style.display = 'none';
+      if (!types.length) {
+        err.textContent = 'Select at least one question type.';
+        err.style.display = 'block';
+        return;
+      }
+
+      const btn = $('setup-generate-btn');
+      btn.disabled = true;
+      btn.textContent = 'Generating…';
+
+      const role    = $('setup-role').value.trim();
+      const company = $('setup-company').value.trim();
+      const notes   = $('setup-notes').value.trim();
+      const jd      = document.getElementById('job-description-input')?.value?.trim();
+      const apiKey  = document.getElementById('api-key-input')?.value?.trim();
+      const profile = document.getElementById('topbar-profile-label')?.textContent;
+
+      try {
+        if (apiKey) {
+          generated = await claudeGenerate(apiKey, types, role, company, notes, jd, profile);
+        } else {
+          generated = fallbackGenerate(types, role, company);
+        }
+      } catch (e) {
+        console.warn('[Setup] Claude generation failed, using fallback:', e);
+        generated = fallbackGenerate(types, role, company);
+        err.textContent = 'AI generation unavailable — built questions from templates instead.';
+        err.style.display = 'block';
+      }
+
+      renderQuestions(generated);
+      btn.disabled = false;
+      btn.textContent = 'Regenerate Questions';
+    });
+
+    $('setup-start-btn').addEventListener('click', () => {
+      if (generated.length && window.QuestionManager) {
+        window.QuestionManager.setQuestions(generated);
+      }
+      window.AdaptIQ_UI.showScreen('dashboard');
+      window.AdaptIQ_UI.startSession();
+    });
+  })();
+  </script>
 
   <!-- ==========================================
        SCREEN 3: MAIN DASHBOARD
@@ -3226,7 +4009,7 @@ window.BrainManager = {
   <script>
   // === QUESTION MANAGER === //
   window.QuestionManager = (() => {
-    const QUESTIONS = [
+    let QUESTIONS = [
       // Basic Information
       { cat: 'Basic Information',      q: 'What is your name?' },
       { cat: 'Basic Information',      q: 'What college do you go to?' },
@@ -3312,7 +4095,14 @@ window.BrainManager = {
       });
     }
 
-    return { init, next, prev, reset, total: QUESTIONS.length, get(i) { return QUESTIONS[i]; } };
+    function setQuestions(arr) {
+      if (!Array.isArray(arr) || arr.length === 0) return;
+      QUESTIONS = arr.map(item => ({ cat: item.cat || 'Custom', q: item.q }));
+      current = 0;
+      render();
+    }
+
+    return { init, next, prev, reset, setQuestions, get total() { return QUESTIONS.length; }, get(i) { return QUESTIONS[i]; } };
   })();
   </script>
 

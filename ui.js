@@ -65,8 +65,7 @@ window.AdaptIQ_UI = (() => {
         document.getElementById('topbar-profile-label').textContent = id.toUpperCase();
         Bus.emit('profile:selected', { id });
         addEventLog('info', `Profile selected: <strong>${id.toUpperCase()}</strong>`);
-        showScreen('dashboard');
-        startSession();
+        showScreen('setup');
       });
     });
   }
@@ -1243,6 +1242,7 @@ window.AdaptIQ_UI = (() => {
   return {
     init,
     showScreen,
+    startSession,
     addEventLog,
     updateOrb,
     handleFlag,
