@@ -15,6 +15,10 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+  <!-- Firebase (compat builds — work with plain scripts, no modules needed) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
   <style>
     /* =============================================
        DESIGN TOKENS
@@ -2155,16 +2159,16 @@
         </div>
         <div class="landing-account" id="account-dropdown">
           <button class="landing-account-btn" id="account-btn" type="button">
-            <span class="landing-account-avatar">G</span>
-            Profile
+            <span class="landing-account-avatar" id="account-avatar-sm">G</span>
+            <span id="account-btn-label">Profile</span>
             <span class="landing-account-caret">▼</span>
           </button>
           <div class="landing-account-menu">
             <div class="landing-account-header">
-              <div class="landing-account-header-avatar">G</div>
+              <div class="landing-account-header-avatar" id="account-avatar-lg">G</div>
               <div>
-                <div class="landing-account-name">Guest</div>
-                <div class="landing-account-sub">Not signed in</div>
+                <div class="landing-account-name" id="account-name">Guest</div>
+                <div class="landing-account-sub" id="account-sub">Not signed in</div>
               </div>
             </div>
             <div class="landing-account-divider"></div>
@@ -2180,7 +2184,7 @@
                      placeholder="sk-ant-…  (optional — enables AI responses)" />
             </div>
             <div class="landing-account-divider"></div>
-            <button class="landing-account-item" type="button">Sign In</button>
+            <button class="landing-account-item" type="button" id="account-auth-btn">Sign In with Google</button>
           </div>
         </div>
       </div>
@@ -2254,6 +2258,78 @@ Progress</div>
           if (file) { text.textContent = file.name; zone.classList.add('has-file'); }
           else      { text.textContent = 'Drop your resume here or browse'; zone.classList.remove('has-file'); }
         });
+
+        // ── Firebase Google Sign-In ──
+        // Paste your config from Firebase Console → Project settings → General → Your apps
+        const firebaseConfig = {
+          apiKey: "PASTE_YOUR_API_KEY",
+          authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
+          projectId: "PASTE_YOUR_PROJECT_ID",
+          storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
+          messagingSenderId: "PASTE_YOUR_SENDER_ID",
+          appId: "PASTE_YOUR_APP_ID",
+        };
+
+        (() => {
+          const authBtn   = document.getElementById('account-auth-btn');
+          const nameEl    = document.getElementById('account-name');
+          const subEl     = document.getElementById('account-sub');
+          const btnLabel  = document.getElementById('account-btn-label');
+          const avatarSm  = document.getElementById('account-avatar-sm');
+          const avatarLg  = document.getElementById('account-avatar-lg');
+
+          if (firebaseConfig.apiKey.startsWith('PASTE_')) {
+            authBtn.addEventListener('click', () => {
+              subEl.textContent = 'Add Firebase config first';
+            });
+            return;
+          }
+
+          firebase.initializeApp(firebaseConfig);
+          const auth = firebase.auth();
+
+          function setAvatar(el, user) {
+            if (user?.photoURL) {
+              el.textContent = '';
+              el.style.backgroundImage = `url(${user.photoURL})`;
+              el.style.backgroundSize = 'cover';
+            } else {
+              el.style.backgroundImage = '';
+              el.textContent = (user?.displayName || 'G')[0].toUpperCase();
+            }
+          }
+
+          auth.onAuthStateChanged((user) => {
+            if (user) {
+              nameEl.textContent    = user.displayName || user.email;
+              subEl.textContent     = user.email;
+              btnLabel.textContent  = (user.displayName || 'Profile').split(' ')[0];
+              authBtn.textContent   = 'Sign Out';
+            } else {
+              nameEl.textContent    = 'Guest';
+              subEl.textContent     = 'Not signed in';
+              btnLabel.textContent  = 'Profile';
+              authBtn.textContent   = 'Sign In with Google';
+            }
+            setAvatar(avatarSm, user);
+            setAvatar(avatarLg, user);
+          });
+
+          authBtn.addEventListener('click', async () => {
+            if (auth.currentUser) {
+              await auth.signOut();
+              return;
+            }
+            try {
+              const provider = new firebase.auth.GoogleAuthProvider();
+              await auth.signInWithPopup(provider);
+            } catch (err) {
+              console.warn('[Auth] Sign-in failed:', err);
+              subEl.textContent = err.code === 'auth/popup-closed-by-user'
+                ? 'Sign-in cancelled' : 'Sign-in failed — see console';
+            }
+          });
+        })();
       </script>
     </div>
   </div>
