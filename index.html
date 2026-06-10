@@ -2134,6 +2134,16 @@
 </head>
 <body>
 
+  <!-- Backend-provided configuration (API key etc.) — never asked of the user.
+       The hidden inputs keep the existing read paths working unchanged. -->
+  <script src="config.js"></script>
+  <input type="hidden" id="api-key-input">
+  <input type="checkbox" id="demo-mode-toggle" hidden>
+  <script>
+    document.getElementById('api-key-input').value =
+      (window.ADAPTIQ_CONFIG && window.ADAPTIQ_CONFIG.claudeApiKey) || '';
+  </script>
+
   <!-- ==========================================
        SCREEN 1: LOADING / BOOT
   =========================================== -->
@@ -2151,12 +2161,7 @@
     <div class="landing-content">
       <!-- Top bar -->
       <div class="landing-topbar">
-        <div class="landing-topbar-left">
-          <label class="landing-demo-chip" title="Demo Mode — fast calibration, short cooldowns">
-            <input type="checkbox" id="demo-mode-toggle">
-            <span>⚡</span>
-          </label>
-        </div>
+        <div class="landing-topbar-left"></div>
         <div class="landing-account" id="account-dropdown">
           <button class="landing-account-btn" id="account-btn" type="button">
             <span class="landing-account-avatar" id="account-avatar-sm">G</span>
@@ -2177,12 +2182,6 @@
             </button>
             <button class="landing-account-item" type="button">Account Settings</button>
             <button class="landing-account-item" type="button">Preferences</button>
-            <div class="landing-account-divider"></div>
-            <div class="landing-account-apikey">
-              <div class="landing-account-apikey-label">Claude API Key</div>
-              <input id="api-key-input" type="password" class="landing-api-input"
-                     placeholder="sk-ant-…  (optional — enables AI responses)" />
-            </div>
             <div class="landing-account-divider"></div>
             <button class="landing-account-item" type="button" id="account-auth-btn">Sign In with Google</button>
           </div>
