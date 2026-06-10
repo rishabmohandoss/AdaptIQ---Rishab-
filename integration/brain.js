@@ -168,7 +168,7 @@ const AnomalyDetector = (() => {
     const elapsed = now - calibrationStartTime;
 
     if (isCalibrating) {
-      if (elapsed < 30000) {
+      if (elapsed < 8000) {
         Bus.emit('signal:update', { ...latestSignals, ces: 100 });
         return;
       }

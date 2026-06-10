@@ -65,183 +65,10 @@ window.AdaptIQ_UI = (() => {
         document.getElementById('topbar-profile-label').textContent = id.toUpperCase();
         Bus.emit('profile:selected', { id });
         addEventLog('info', `Profile selected: <strong>${id.toUpperCase()}</strong>`);
-        showScreen('calibration');
-        startCalibrationAnimation();
+        showScreen('dashboard');
+        startSession();
       });
     });
-  }
-
-  // ============================================================
-  // CALIBRATION SCREEN
-  // ============================================================
-  let calibAnimFrame = null;
-
-  function startCalibrationAnimation() {
-    const canvas = document.getElementById('calib-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    canvas.width  = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-
-    const W = canvas.width;
-    const H = canvas.height;
-    let t = 0;
-    let gazeReady    = false;
-    let currentPoint = 0;
-
-    const points = Array.from({ length: 9 }, (_, i) => ({
-      x: (0.2 + 0.3 * (i % 3)) * W,
-      y: (0.25 + 0.25 * Math.floor(i / 3)) * H,
-      progress: 0,
-      done: false,
-    }));
-
-    // Update instruction text helper
-    const instrEl = document.getElementById('calib-instruction');
-    function setInstruction(html) { if (instrEl) instrEl.innerHTML = html; }
-
-    // Gaze engine events drive dot advancement
-    const onProgress = ({ pointIndex, progress }) => {
-      if (points[pointIndex]) points[pointIndex].progress = progress;
-    };
-    const onNext = ({ pointIndex }) => {
-      if (points[pointIndex - 1]) points[pointIndex - 1].done = true;
-      currentPoint = pointIndex;
-      if (points[currentPoint]) points[currentPoint].progress = 0;
-      setInstruction(`<strong>Hold gaze on dot ${pointIndex + 1} of 9</strong> — keep still until it fills`);
-    };
-    const onReady = () => {
-      gazeReady = true;
-      setInstruction('<strong>Look at the dot</strong> — hold still until the ring fills');
-    };
-
-    Bus.on('gaze:calibration:progress', onProgress);
-    Bus.on('gaze:calibration:next',     onNext);
-    Bus.on('gaze:ready',                onReady);
-
-    function draw() {
-      ctx.clearRect(0, 0, W, H);
-
-      // Subtle grid
-      ctx.strokeStyle = 'rgba(0,229,255,0.05)';
-      ctx.lineWidth = 1;
-      for (let x = 0; x < W; x += 48) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-      }
-      for (let y = 0; y < H; y += 48) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-      }
-
-      if (!gazeReady) {
-        // Loading: first dot pulses while sensors initialize
-        const pulse = 0.5 + 0.5 * Math.sin(t * 0.06);
-        const p = points[0];
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 18 + 6 * pulse, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(0,229,255,${0.08 + 0.08 * pulse})`;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0,229,255,${0.3 + 0.3 * pulse})`;
-        ctx.fill();
-      } else {
-        // Active: each dot shows a progress arc that fills as the user fixates
-        points.forEach((p, i) => {
-          if (i > currentPoint) return;
-
-          if (p.done) {
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0,255,136,0.3)';
-            ctx.fill();
-            ctx.strokeStyle = '#00ff88';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-          } else if (i === currentPoint) {
-            // Static outer guide ring
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 22, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(0,229,255,0.15)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-
-            // Progress arc — fills as iris stays still
-            if (p.progress > 0) {
-              ctx.beginPath();
-              ctx.arc(p.x, p.y, 22, -Math.PI / 2, -Math.PI / 2 + p.progress * 2 * Math.PI);
-              ctx.strokeStyle = p.progress > 0.8 ? '#00ff88' : '#00e5ff';
-              ctx.lineWidth = 2.5;
-              ctx.stroke();
-            }
-
-            // Center dot
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-            ctx.fillStyle = '#00e5ff';
-            ctx.fill();
-
-            // Crosshair
-            ctx.strokeStyle = 'rgba(0,229,255,0.4)';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([3, 3]);
-            ctx.beginPath(); ctx.moveTo(p.x - 20, p.y); ctx.lineTo(p.x + 20, p.y); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(p.x, p.y - 20); ctx.lineTo(p.x, p.y + 20); ctx.stroke();
-            ctx.setLineDash([]);
-          }
-        });
-
-        // Trail connecting completed dots
-        if (currentPoint > 0) {
-          ctx.beginPath();
-          ctx.moveTo(points[0].x, points[0].y);
-          for (let i = 1; i <= Math.min(currentPoint, points.length - 1); i++) {
-            ctx.lineTo(points[i].x, points[i].y);
-          }
-          ctx.strokeStyle = 'rgba(0,255,136,0.2)';
-          ctx.lineWidth = 1;
-          ctx.setLineDash([4, 4]);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-      }
-
-      t++;
-      calibAnimFrame = requestAnimationFrame(draw);
-    }
-
-    draw();
-  }
-
-  function updateCalibrationStage(type) {
-    const stageEl = document.getElementById(`calib-stage-${type}`);
-    if (!stageEl) return;
-
-    // Mark previous stages as done
-    const order = ['face', 'gaze', 'audio'];
-    const idx = order.indexOf(type);
-
-    order.forEach((s, i) => {
-      const el = document.getElementById(`calib-stage-${s}`);
-      if (!el) return;
-      if (i < idx) {
-        el.classList.remove('active'); el.classList.add('done');
-        el.querySelector('.calib-stage-dot').textContent = '✓';
-      } else if (i === idx) {
-        el.classList.add('active');
-      }
-    });
-
-    state.calibrationStages[type] = 'complete';
-
-    const instructions = {
-      face:  '<strong>Face detected!</strong> Now follow the dots with your eyes',
-      gaze:  '<strong>Gaze calibrated!</strong> Speak normally for baseline audio',
-      audio: '<strong>All systems calibrated!</strong> Starting session…',
-    };
-    const instr = document.getElementById('calib-instruction');
-    if (instr) instr.innerHTML = instructions[type] || '';
   }
 
   // ============================================================
@@ -253,6 +80,13 @@ window.AdaptIQ_UI = (() => {
     state.engagedSeconds = 0;
     state.lastFaceTime = 0;
     initDashboard();
+
+    // Show "Warming up…" pill and auto-dismiss after 8s
+    const warmupPill = document.getElementById('warmup-pill');
+    if (warmupPill) {
+      warmupPill.style.opacity = '1';
+      setTimeout(() => { warmupPill.style.opacity = '0'; }, 8000);
+    }
 
     state.sessionTimerInterval = setInterval(() => {
       state.sessionSeconds++;
@@ -1006,16 +840,7 @@ window.AdaptIQ_UI = (() => {
   // CALIBRATION COMPLETE
   // ============================================================
   function handleCalibrationComplete(data) {
-    if (!data) return;
-    updateCalibrationStage(data.type);
-    if (data.type === 'gaze') {
-      cancelAnimationFrame(calibAnimFrame); // stop canvas loop before leaving screen
-      calibAnimFrame = null;
-      setTimeout(() => {
-        showScreen('dashboard');
-        startSession();
-      }, 600);
-    }
+    // Calibration completes silently in background — dashboard is already showing
   }
 
   // ============================================================

@@ -350,7 +350,7 @@ const GazeEngine = (() => {
       overlay.append(msg, dot, track, sub);
       document.body.appendChild(overlay);
 
-      const DURATION = 3000;
+      const DURATION = 2000;
       const start = Date.now();
 
       const tick = setInterval(() => {
