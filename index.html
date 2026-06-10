@@ -2876,6 +2876,7 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
     })();
   </script>
 
+  <script src="metrics-math.js"></script>
   <script>
     // === SENSORS MODULE === //
 // === ADAPTIQ SENSORS MODULE === //
@@ -2931,7 +2932,10 @@ const FaceEngine = (() => {
   let blinkCount = 0;
   let blinkTimestamps = [];
   let earBelow = 0;
-  const EAR_THRESHOLD = 0.23;  // raised from 0.21 — vladmandic landmarks run slightly tighter
+  // Blink threshold adapts to the user's own open-eye EAR (glasses, narrow
+  // eyes, and lighting shift the absolute EAR; a fixed 0.23 misfires)
+  let earThreshold = 0.23;
+  let openEyeEars = [];
   const BLINK_MIN_FRAMES = 2;
   let pitchBaseline = null;
   let pitchSamples = [];
@@ -2974,10 +2978,11 @@ const FaceEngine = (() => {
       const eyeSpan  = dist(leftEye, rightEye);
       const rawPitch = (noseTip.y - eyeMidY) / (eyeSpan + 1e-6) * 100;
 
-      // Calibrate pitch baseline from first 30 frames so neutral pose reads 0
+      // Calibrate pitch baseline from first 30 frames so neutral pose reads 0.
+      // Median, not mean — robust to the user moving during the first seconds.
       if (pitchSamples.length < 30) {
         pitchSamples.push(rawPitch);
-        pitchBaseline = pitchSamples.reduce((a, b) => a + b, 0) / pitchSamples.length;
+        pitchBaseline = window.MetricsMath.median(pitchSamples);
       }
       const pitch = Math.abs(rawPitch - (pitchBaseline ?? rawPitch));
 
@@ -2996,13 +3001,17 @@ const FaceEngine = (() => {
       const rightEyePts = [pts[42], pts[43], pts[44], pts[45], pts[46], pts[47]];
       const ear = (eyeAspectRatio(leftEyePts) + eyeAspectRatio(rightEyePts)) / 2;
 
-      if (ear < EAR_THRESHOLD) {
+      if (ear < earThreshold) {
         earBelow++;
       } else {
         if (earBelow >= BLINK_MIN_FRAMES) {
           blinkTimestamps.push(Date.now());
         }
         earBelow = 0;
+        // Track open-eye EAR distribution and adapt the blink threshold to it
+        openEyeEars.push(ear);
+        if (openEyeEars.length > 120) openEyeEars.shift();
+        earThreshold = window.MetricsMath.adaptiveEarThreshold(openEyeEars);
       }
 
       const now = Date.now();
@@ -3092,6 +3101,10 @@ const GazeEngine = (() => {
   const L_IRIS = 468, R_IRIS = 473;
   const L_OUTER = 33,  L_INNER = 133, L_TOP = 159, L_BOT = 145;
   const R_INNER = 362, R_OUTER = 263, R_TOP = 386, R_BOT = 374;
+  // Head-pose reference landmarks for gaze compensation
+  const NOSE_TIP = 1, FACE_L = 234, FACE_R = 454, FOREHEAD = 10, CHIN = 152;
+
+  let headCalibSamples = []; // head ratios collected during calibration
 
   function _irisRatio(lm) {
     const lx = (lm[L_IRIS].x - lm[L_OUTER].x) / (lm[L_INNER].x - lm[L_OUTER].x + 1e-6);
@@ -3101,10 +3114,24 @@ const GazeEngine = (() => {
     return { avgX: (lx + rx) / 2, avgY: (ly + ry) / 2 };
   }
 
-  function _irisToScreen(iris) {
+  // Normalised nose position within the face box: 0.5/0.5 when facing the
+  // camera; moves with head yaw (x) and pitch (y).
+  function _headRatio(lm) {
+    const hx = (lm[NOSE_TIP].x - lm[FACE_L].x)   / (lm[FACE_R].x - lm[FACE_L].x   + 1e-6);
+    const hy = (lm[NOSE_TIP].y - lm[FOREHEAD].y) / (lm[CHIN].y   - lm[FOREHEAD].y + 1e-6);
+    return { x: hx, y: hy };
+  }
+
+  function _irisToScreen(iris, head) {
     if (!baseline) return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    const dx = iris.avgX - baseline.avgX;
-    const dy = iris.avgY - baseline.avgY;
+    const MM = window.MetricsMath;
+    // Gaze ≈ head rotation + eye-in-head: when the head turns but the eyes
+    // counter-rotate to stay on screen, the two cancel instead of reading as
+    // "looking away".
+    const headDx = (head && baseline.headX != null) ? head.x - baseline.headX : 0;
+    const headDy = (head && baseline.headY != null) ? head.y - baseline.headY : 0;
+    const dx = MM.compensateGaze(iris.avgX - baseline.avgX, headDx, 0.6);
+    const dy = MM.compensateGaze(iris.avgY - baseline.avgY, headDy, 0.4);
     const scX = calibScaleX ?? (window.innerWidth  / 0.3);
     const scY = calibScaleY ?? (window.innerHeight / 0.3);
     const sx = window.innerWidth  / 2 + dx * scX;
@@ -3121,8 +3148,10 @@ const GazeEngine = (() => {
     if (!lm[L_IRIS] || !lm[R_IRIS]) return;
 
     const iris = _irisRatio(lm);
+    const head = _headRatio(lm);
 
     if (calibrating) {
+      headCalibSamples.push(head);
       if (calibrationCallback) calibrationCallback(iris);
       else calibSamples.push(iris);
       return;
@@ -3130,7 +3159,7 @@ const GazeEngine = (() => {
 
     if (!running || !baseline) return; // no real calibration baseline — skip tracking
 
-    const { x, y } = _irisToScreen(iris);
+    const { x, y } = _irisToScreen(iris, head);
     xBuf.push(x);
     yBuf.push(y);
 
@@ -3189,6 +3218,7 @@ const GazeEngine = (() => {
     return new Promise((resolve) => {
       calibrating = true;
       calibMap    = [];
+      headCalibSamples = [];
       let pointIndex  = 0;
       let rawHistory  = [];   // last SMOOTH_N raw iris frames for smoothing
       let stableSamples = []; // smoothed frames accumulated during fixation
@@ -3267,6 +3297,7 @@ const GazeEngine = (() => {
         clearTimeout(timeoutId);
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         _buildCalibration();
+        _applyHeadBaseline();
         Bus.emit('calibration:complete', { type: 'gaze' });
         resolve(calibMap);
       }
@@ -3329,6 +3360,14 @@ const GazeEngine = (() => {
 
   // Build baseline + calibrated scale from collected points.
   // Scale is only accepted when within 30%–300% of the default (sanity guard).
+  // Median head ratio from calibration — becomes the "facing the camera" reference
+  function _applyHeadBaseline() {
+    if (!baseline || headCalibSamples.length < 5) return;
+    const MM = window.MetricsMath;
+    baseline.headX = MM.median(headCalibSamples.map(s => s.x));
+    baseline.headY = MM.median(headCalibSamples.map(s => s.y));
+  }
+
   function _buildCalibration() {
     if (!calibMap.length) { baseline = null; return; }
 
@@ -3369,6 +3408,7 @@ const GazeEngine = (() => {
     return new Promise((resolve) => {
       calibrating = true;
       calibSamples = [];
+      headCalibSamples = [];
       calibrationCallback = null;
       setTimeout(() => {
         calibrating = false;
@@ -3380,6 +3420,7 @@ const GazeEngine = (() => {
         } else {
           baseline = { avgX: 0.5, avgY: 0.5 };
         }
+        _applyHeadBaseline();
         Bus.emit('calibration:complete', { type: 'gaze' });
         resolve();
       }, 2000);
@@ -3411,14 +3452,16 @@ const AudioEngine = (() => {
   let wordTimestamps = [];
 
   const rmsBuf       = new SignalBuffer(30);
-  const centroidBuf  = new SignalBuffer(30);
   const silenceWindows = [];
 
   let silenceThreshold = 0.01;
-  let ambientSamples = [];
+  let rmsHistory = [];        // rolling RMS samples for continuous threshold calibration
+  let f0Samples = [];         // rolling voiced-frame fundamental frequencies (true pitch)
+  let speakingWindows = [];   // rolling 60s of { speaking, time } for speaking-time WPM
+  let srSupported = false;    // Web Speech API availability (false on Firefox)
 
   let latestFeatures = { rms: 0, spectralCentroid: 0 };
-  let latest = { ves: 0, pvs: 0, silr: 0, sr: 0, transcript: '' };
+  let latest = { ves: 0, pvs: 0, silr: 0, sr: 0, wpm: null, transcript: '' };
 
   function _rmsFromAnalyser() {
     const buf = new Float32Array(analyser.fftSize);
@@ -3429,7 +3472,8 @@ const AudioEngine = (() => {
 
   function _setupSpeechRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR) { srSupported = false; return; }
+    srSupported = true;
     recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -3475,46 +3519,59 @@ const AudioEngine = (() => {
 
   function _computeSignals() {
     try {
+      const MM = window.MetricsMath;
       const rms = (meydaAnalyzer && latestFeatures?.rms != null)
         ? latestFeatures.rms
         : _rmsFromAnalyser();
-      const centroid = latestFeatures?.spectralCentroid ?? 0;
 
       rmsBuf.push(rms);
-      centroidBuf.push(centroid);
 
       // VES: upward spikes only — sudden quiet is not a vocal stress indicator
       const ves = Math.min(100, Math.max(0, rmsBuf.zScore(rms)) * 25);
 
-      const centroidMean = centroidBuf.mean();
-      const pvs = centroidMean > 0
-        ? Math.min(100, (centroidBuf.stddev() / centroidMean) * 100)
-        : 0;
+      // Silence threshold: continuously recalibrated from the ambient floor
+      // (10th percentile of recent RMS) — robust to the user talking at start.
+      rmsHistory.push(rms);
+      if (rmsHistory.length > 60) rmsHistory.shift(); // last 2 minutes
+      silenceThreshold = MM.adaptiveSilenceThreshold(rmsHistory);
 
-      // Calibrate silence threshold from first 5 ambient samples.
-      // Use minimum (not average) × 2 so a loud window doesn't inflate the threshold
-      // and cause speech to register as silence. Hard cap at 0.02 — speech RMS is
-      // typically 0.05–0.3, so anything below 0.02 is genuinely quiet.
-      if (ambientSamples.length < 5) {
-        ambientSamples.push(rms);
-        const minAmbient = Math.min(...ambientSamples);
-        silenceThreshold = Math.max(0.005, Math.min(0.02, minAmbient * 2));
-      }
-      silenceWindows.push(rms < silenceThreshold);
-      if (silenceWindows.length > 8) silenceWindows.shift(); // 8×2s = 16s window (was 30s)
+      const speaking = rms >= silenceThreshold;
+      silenceWindows.push(!speaking);
+      if (silenceWindows.length > 8) silenceWindows.shift(); // 8×2s = 16s window
       const silr = (silenceWindows.filter(Boolean).length / silenceWindows.length) * 100;
 
-      // SR: 0 when no speech yet (not penalised until user starts speaking)
+      // PVS: true pitch variability — f0 via autocorrelation on voiced frames
+      // (replaces spectral centroid CV, which measured brightness, not pitch)
+      if (speaking && analyser) {
+        const buf = new Float32Array(analyser.fftSize);
+        analyser.getFloatTimeDomainData(buf);
+        const f0 = MM.autocorrelatePitch(buf, audioCtx.sampleRate);
+        if (f0 != null) {
+          f0Samples.push(f0);
+          if (f0Samples.length > 40) f0Samples.shift();
+        }
+      }
+      const pvs = MM.pitchVariability(f0Samples);
+
+      // SR: WPM over time actually spent SPEAKING, judged against a 110–160
+      // comfortable band (pauses no longer read as slow speech; fast and slow
+      // are penalised independently). Returns 0 until enough data exists.
       const now = Date.now();
+      speakingWindows.push({ speaking, time: now });
+      speakingWindows = speakingWindows.filter(e => now - e.time < 60000);
+      const speakingSecs = speakingWindows.filter(e => e.speaking).length * 2;
+
       wordTimestamps = wordTimestamps.filter(e => now - e.time < 60000);
       const totalWords = wordTimestamps.reduce((s, e) => s + e.words, 0);
-      const sr = totalWords === 0 ? 0 : Math.min(100, Math.abs(totalWords - 135) / 135 * 100);
+      const wpm = MM.computeWpm(totalWords, speakingSecs);
+      const sr = srSupported ? MM.rateDeviation(wpm) : 0;
 
       latest = {
         ves: Math.round(ves),
         pvs: Math.round(pvs),
         silr: Math.round(silr),
         sr: Math.round(sr),
+        wpm: wpm != null ? Math.round(wpm) : null,
         transcript: fullTranscript,
       };
       Bus.emit('signal:audio', latest);
@@ -3539,16 +3596,19 @@ const AudioEngine = (() => {
 
   function getLatest()    { return latest; }
   function getTranscript(){ return fullTranscript; }
+  function hasSpeechRecognition() { return srSupported; }
 
   function reset() {
     fullTranscript = '';
     wordTimestamps = [];
     silenceWindows.length = 0;
-    ambientSamples = [];
+    rmsHistory = [];
+    f0Samples = [];
+    speakingWindows = [];
     silenceThreshold = 0.01;
   }
 
-  return { init, start, stop, reset, getLatest, getTranscript };
+  return { init, start, stop, reset, getLatest, getTranscript, hasSpeechRecognition };
 })();
 
 window.AudioEngine = AudioEngine;
@@ -3987,12 +4047,19 @@ const InterviewScorecard = (() => {
     // PVS: moderate variation is fine, only heavily penalise excessive pitch swings
     // SilR: silence is the primary penalty for vocal presence
     const vocalConfidence = clamp(100 - latestPvs * 0.3 - latestSilr * 0.7);
-    const fillerPenalty   = wordCount > 0 ? (fillerCount / wordCount) * 100 : 0;
-    const speechClarity   = clamp(100 - latestSr - fillerPenalty);
-    const overall         = clamp(eyeContact * 0.25 + headStability * 0.20 + vocalConfidence * 0.25 + speechClarity * 0.30);
-    let grade = 'F';
-    if (overall >= 85) grade = 'A'; else if (overall >= 70) grade = 'B';
-    else if (overall >= 55) grade = 'C'; else if (overall >= 40) grade = 'D';
+
+    // Speech Clarity requires the Web Speech API (Chrome/Edge). Where it is
+    // unavailable (e.g. Firefox) it is null and excluded from the overall
+    // grade via weight renormalisation — never a free 100.
+    const srAvailable = window.AudioEngine?.hasSpeechRecognition?.() ?? true;
+    let speechClarity = null;
+    if (srAvailable) {
+      const fillerPenalty = wordCount > 0 ? (fillerCount / wordCount) * 100 : 0;
+      speechClarity = clamp(100 - latestSr - fillerPenalty);
+    }
+
+    const { overall, grade } = window.MetricsMath.overallScore(
+      { eyeContact, headStability, vocalConfidence, speechClarity });
     return { eyeContact, headStability, vocalConfidence, speechClarity, overall, grade };
   }
 
@@ -4141,9 +4208,14 @@ window.BrainManager = {
       nextBtn.textContent = current === QUESTIONS.length - 1 ? 'Done' : 'Next →';
     }
 
-    function next() { if (current < QUESTIONS.length - 1) { current++; render(); } }
-    function prev() { if (current > 0) { current--; render(); } }
-    function reset() { current = 0; render(); }
+    // Every navigation path (buttons, arrow keys, programmatic) announces the
+    // new index so per-question scoring can never desync from the UI.
+    function _announce() {
+      if (typeof Bus !== 'undefined') Bus.emit('question:changed', { index: current });
+    }
+    function next() { if (current < QUESTIONS.length - 1) { current++; render(); _announce(); } }
+    function prev() { if (current > 0) { current--; render(); _announce(); } }
+    function reset() { current = 0; render(); _announce(); }
 
     function init() {
       const prevBtn = document.getElementById('btn-prev-q');
@@ -4177,6 +4249,7 @@ window.BrainManager = {
       QUESTIONS = arr.map(item => ({ cat: item.cat || 'Custom', q: item.q }));
       current = 0;
       render();
+      _announce();
     }
 
     return { init, next, prev, reset, setQuestions, get total() { return QUESTIONS.length; }, get(i) { return QUESTIONS[i]; } };

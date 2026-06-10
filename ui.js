@@ -39,7 +39,7 @@ window.AdaptIQ_UI = (() => {
     // New: per-question tracking
     questionIndex: 0,
     questionSnapshots: Array.from({ length: 30 }, () => ({
-      eyeContact: 0, headStability: 0, vocalConfidence: 0, speechClarity: 0, samples: 0
+      eyeContact: 0, headStability: 0, vocalConfidence: 0, speechClarity: 0, samples: 0, claritySamples: 0
     })),
     coachBuffer: '',
   };
@@ -176,13 +176,14 @@ window.AdaptIQ_UI = (() => {
       });
     }
 
-    // Track question index changes for per-question snapshots
-    document.getElementById('btn-next-q')?.addEventListener('click', () => {
-      state.questionIndex = Math.min(state.questionSnapshots.length - 1, state.questionIndex + 1);
-    });
-    document.getElementById('btn-prev-q')?.addEventListener('click', () => {
-      state.questionIndex = Math.max(0, state.questionIndex - 1);
-    });
+    // Track question index for per-question snapshots. QuestionManager emits
+    // this on EVERY navigation path (buttons, arrow keys, programmatic reset),
+    // so the snapshot index can no longer desync from the displayed question.
+    if (typeof Bus !== 'undefined') {
+      Bus.on('question:changed', ({ index }) => {
+        state.questionIndex = Math.max(0, Math.min(state.questionSnapshots.length - 1, index || 0));
+      });
+    }
 
     // Mode toggle pill buttons (legacy)
     const btnSimple = document.getElementById('mode-btn-simple');
@@ -554,8 +555,9 @@ window.AdaptIQ_UI = (() => {
     const eyeVal  = Math.round(Math.max(0, 100 - (m.osr || 0)));
     // Calm = 100 - emotional tension
     const calmVal = Math.round(Math.max(0, 100 - (m.et || 0)));
-    // Voice = vocal energy spread (0-100)
-    const voiceVal = Math.round(Math.max(0, Math.min(100, (m.ves || 0))));
+    // Voice = vocal presence (100 - silence ratio). VES was wrong here: it is
+    // a spike detector that reads ~0 during normal steady speech.
+    const voiceVal = Math.round(Math.max(0, Math.min(100, 100 - (m.silr || 0))));
 
     function setSignal(id, val) {
       const el = document.getElementById(id);
@@ -812,10 +814,16 @@ window.AdaptIQ_UI = (() => {
       ['ps-clarity','psb-clarity', speechClarity],
     ];
     panelVals.forEach(([valId, barId, val]) => {
-      const v = Math.round(val || 0);
-      const color = scoreColor(v);
       const valEl = document.getElementById(valId);
       const barEl = document.getElementById(barId);
+      if (val == null) {
+        // Speech recognition unavailable in this browser — show N/A, not a fake score
+        if (valEl) { valEl.textContent = 'N/A'; valEl.style.color = 'rgba(255,255,255,0.3)'; }
+        if (barEl) { barEl.style.width = '0%'; }
+        return;
+      }
+      const v = Math.round(val || 0);
+      const color = scoreColor(v);
       if (valEl) { valEl.textContent = v; valEl.style.color = color; }
       if (barEl) { barEl.style.width = `${v}%`; barEl.style.background = color; }
     });
@@ -829,7 +837,10 @@ window.AdaptIQ_UI = (() => {
       snap.eyeContact      += ((eyeContact      || 0) - snap.eyeContact)      / n;
       snap.headStability   += ((headStability   || 0) - snap.headStability)   / n;
       snap.vocalConfidence += ((vocalConfidence || 0) - snap.vocalConfidence) / n;
-      snap.speechClarity   += ((speechClarity  || 0) - snap.speechClarity)   / n;
+      if (speechClarity != null) {
+        snap.claritySamples = (snap.claritySamples || 0) + 1;
+        snap.speechClarity += (speechClarity - snap.speechClarity) / snap.claritySamples;
+      }
     }
 
     console.log(`[AdaptIQ Scores] Overall: ${Math.round(overall)}% (${grade})`);
@@ -872,7 +883,7 @@ window.AdaptIQ_UI = (() => {
       state.questionIndex = 0;
       state.coachBuffer = '';
       state.questionSnapshots = Array.from({ length: 30 }, () => ({
-        eyeContact: 0, headStability: 0, vocalConfidence: 0, speechClarity: 0, samples: 0
+        eyeContact: 0, headStability: 0, vocalConfidence: 0, speechClarity: 0, samples: 0, claritySamples: 0
       }));
       state.sparkBuffers = { gds: [], hpd: [], ves: [], ces: [], silr: [] };
       // Reset coach panel
@@ -1058,10 +1069,12 @@ window.AdaptIQ_UI = (() => {
 
       const qData = qm ? qm.get(i) : null;
       const qText = qData ? `Q${i + 1}. ${qData.q}` : `Question ${i + 1}`;
-      const overallQ = snap.samples > 0
-        ? snap.eyeContact * 0.25 + snap.headStability * 0.20 + snap.vocalConfidence * 0.25 + snap.speechClarity * 0.30
-        : 0;
-      const grade = overallQ >= 85 ? 'A' : overallQ >= 70 ? 'B' : overallQ >= 55 ? 'C' : overallQ >= 40 ? 'D' : 'F';
+      const { overall: overallQ, grade } = window.MetricsMath.overallScore({
+        eyeContact:      snap.eyeContact,
+        headStability:   snap.headStability,
+        vocalConfidence: snap.vocalConfidence,
+        speechClarity:   (snap.claritySamples || 0) > 0 ? snap.speechClarity : null,
+      });
 
       checkBreak(60);
 
