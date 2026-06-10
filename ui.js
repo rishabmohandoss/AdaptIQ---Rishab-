@@ -1031,7 +1031,7 @@ window.AdaptIQ_UI = (() => {
               'anthropic-dangerous-direct-browser-access': 'true',
             },
             body: JSON.stringify({
-              model: 'claude-sonnet-4-6',
+              model: 'claude-haiku-4-5',
               max_tokens: 2000,
               messages: [{
                 role: 'user',

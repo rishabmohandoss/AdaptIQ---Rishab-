@@ -19,6 +19,10 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
+  <!-- Resume text extraction: pdf.js for PDFs, mammoth for .docx -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+
   <style>
     /* =============================================
        DESIGN TOKENS
@@ -2325,12 +2329,61 @@ Progress</div>
             });
           });
         })();
-        document.getElementById('resume-upload').addEventListener('change', (e) => {
+        // ── Resume upload + text extraction ──
+        // Extracted text is stored on window.ResumeText and fed to Claude
+        // during question generation so questions reference the actual resume.
+        window.ResumeText = '';
+
+        async function extractResumeText(file) {
+          const name = file.name.toLowerCase();
+          if (name.endsWith('.txt')) {
+            return await file.text();
+          }
+          if (name.endsWith('.pdf')) {
+            const lib = window.pdfjsLib;
+            if (!lib) throw new Error('pdf.js not loaded');
+            lib.GlobalWorkerOptions.workerSrc =
+              'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+            const pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
+            const pages = [];
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const content = await (await pdf.getPage(i)).getTextContent();
+              pages.push(content.items.map(it => it.str).join(' '));
+            }
+            return pages.join('\n');
+          }
+          if (name.endsWith('.docx')) {
+            if (!window.mammoth) throw new Error('mammoth not loaded');
+            const result = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+            return result.value;
+          }
+          throw new Error('unsupported'); // legacy .doc etc.
+        }
+
+        document.getElementById('resume-upload').addEventListener('change', async (e) => {
           const file = e.target.files[0];
           const zone = document.getElementById('resume-zone');
           const text = document.getElementById('resume-zone-text');
-          if (file) { text.textContent = file.name; zone.classList.add('has-file'); }
-          else      { text.textContent = 'Drop your resume here or browse'; zone.classList.remove('has-file'); }
+          window.ResumeText = '';
+          if (!file) {
+            text.textContent = 'Drop your resume here or browse';
+            zone.classList.remove('has-file');
+            return;
+          }
+          text.textContent = `Reading ${file.name}…`;
+          try {
+            const extracted = (await extractResumeText(file)).replace(/\s+/g, ' ').trim();
+            if (extracted.length < 30) throw new Error('empty');
+            window.ResumeText = extracted;
+            text.textContent = `✓ ${file.name} — resume understood`;
+            zone.classList.add('has-file');
+          } catch (err) {
+            console.warn('[Resume] extraction failed:', err);
+            text.textContent = err.message === 'unsupported'
+              ? `${file.name} — format not supported, use PDF, DOCX, or TXT`
+              : `${file.name} — couldn't read text, try PDF or TXT`;
+            zone.classList.remove('has-file');
+          }
         });
 
         // ── Firebase Google Sign-In ──
@@ -2620,6 +2673,7 @@ Progress</div>
     }
 
     async function claudeGenerate(apiKey, types, role, company, notes, jd, profile) {
+      const resume = (window.ResumeText || '').slice(0, 8000);
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -2629,18 +2683,20 @@ Progress</div>
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5',
           max_tokens: 3000,
           messages: [{
             role: 'user',
-            content: `You are an interview coach preparing practice questions for a neurodivergent job seeker (support profile: ${profile || 'general'}). Generate exactly ${count} interview questions tailored to this job.
+            content: `You are an interview coach preparing practice questions for a neurodivergent job seeker (support profile: ${profile || 'general'}). Generate exactly ${count} interview questions tailored to this job and this candidate.
 
 Role: ${role || 'not specified'}
 Company: ${company || 'not specified'}
 Job description: ${jd || 'not provided'}
 Additional notes from the candidate: ${notes || 'none'}
+Candidate's resume: ${resume || 'not provided'}
 
 Only use these question types: ${types.join(', ')}.
+${resume ? 'Ground several questions in SPECIFIC items from the resume — real projects, employers, skills, or education it mentions (e.g. "Tell me about your work on X at Y"). Also probe gaps between the resume and the job requirements.' : ''}
 Order them like a real interview (background first, closing last). Keep each question clear, concrete, and one sentence — no compound multi-part questions, no jargon.
 
 Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q": "<question>"}`,
@@ -4085,7 +4141,7 @@ const ClaudeClient = (() => {
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5',
           max_tokens: 150,
           stream: true,
           system: systemPrompt,
@@ -4142,7 +4198,7 @@ const ClaudeClient = (() => {
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5',
           max_tokens: 400,
           system: 'You are a professional interview coach writing a session debrief. Be constructive, specific, and encouraging.',
           messages: [{ role: 'user', content: `Write a professional debrief for this interview practice session.\n\nSession data:\n${JSON.stringify(sessionData, null, 2)}\n\nInclude: overall performance summary, 2 strengths, 2 areas to improve, and 2 actionable tips.` }],
