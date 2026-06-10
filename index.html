@@ -621,18 +621,93 @@
       color: #fff;
     }
 
-    .setup-split {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 48px;
+    /* Wizard: one step at a time */
+    .setup-wizard {
+      display: flex;
+      flex-direction: column;
       flex: 1;
       min-height: 0;
-      padding-top: 36px;
-      max-width: 1240px;
+      padding-top: 28px;
+      max-width: 720px;
       width: 100%;
       margin: 0 auto;
     }
-    .setup-col { display: flex; flex-direction: column; min-height: 0; }
+
+    .setup-progress {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 30px;
+    }
+    .setup-prog-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      transition: color 200ms;
+    }
+    .setup-prog-step .num {
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 50%;
+      font-size: 10px;
+      transition: all 200ms;
+    }
+    .setup-prog-step.active { color: #fff; }
+    .setup-prog-step.active .num { border-color: #fff; }
+    .setup-prog-step.done .num { background: #fff; border-color: #fff; color: #000; }
+    .setup-prog-line {
+      width: 48px; height: 1px;
+      background: rgba(255,255,255,0.12);
+    }
+
+    .setup-step {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+    .setup-step.active {
+      display: flex;
+      animation: stepIn 0.35s both cubic-bezier(0.4,0,0.2,1);
+    }
+    @keyframes stepIn {
+      from { opacity: 0; transform: translateX(24px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .setup-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-top: 18px;
+    }
+    .setup-nav-btn {
+      padding: 11px 22px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 6px;
+      color: rgba(255,255,255,0.7);
+      font-family: inherit;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      cursor: pointer;
+      transition: all 180ms;
+    }
+    .setup-nav-btn:hover { border-color: rgba(255,255,255,0.6); color: #fff; }
+    .setup-nav-btn.primary {
+      background: #fff;
+      border-color: #fff;
+      color: #000;
+    }
+    .setup-nav-btn.primary:hover { background: transparent; color: #fff; }
 
     .setup-heading {
       font-size: clamp(1.6rem, 2.6vw, 2.2rem);
@@ -2345,20 +2420,35 @@ Progress</div>
         <div class="setup-mode-chip" id="setup-mode-chip">Mode: —</div>
       </div>
 
-      <div class="setup-split">
-        <!-- LEFT: job specifics + question config -->
-        <div class="setup-col">
-          <h2 class="setup-heading">Build your interview</h2>
-          <p class="setup-sub">Tailored questions, generated for you</p>
+      <div class="setup-wizard">
+        <!-- Progress indicator -->
+        <div class="setup-progress">
+          <div class="setup-prog-step active" data-step="1"><span class="num">1</span><span class="lbl">Job Details</span></div>
+          <div class="setup-prog-line"></div>
+          <div class="setup-prog-step" data-step="2"><span class="num">2</span><span class="lbl">Interview Type</span></div>
+          <div class="setup-prog-line"></div>
+          <div class="setup-prog-step" data-step="3"><span class="num">3</span><span class="lbl">Customize</span></div>
+        </div>
 
-          <div class="landing-section-label">Job Specifics</div>
+        <!-- STEP 1: JOB DETAILS -->
+        <div class="setup-step active" data-step="1">
+          <h2 class="setup-heading">Tell us about the job</h2>
+          <p class="setup-sub">Every question gets tailored to it</p>
+
+          <div class="landing-section-label">Job Details</div>
           <div class="setup-field-row">
             <input id="setup-role" class="setup-input" placeholder="Role title — e.g. Data Analyst Intern">
             <input id="setup-company" class="setup-input" placeholder="Company — e.g. Prudential">
           </div>
           <div style="height:12px"></div>
-          <textarea id="setup-notes" class="setup-input"
-                    placeholder="Anything else? Team, tech stack, responsibilities, what you're nervous about…"></textarea>
+          <textarea id="setup-jd" class="setup-input"
+                    placeholder="Paste the job description here… (optional)"></textarea>
+        </div>
+
+        <!-- STEP 2: INTERVIEW TYPE -->
+        <div class="setup-step" data-step="2">
+          <h2 class="setup-heading">What kind of interview?</h2>
+          <p class="setup-sub">Pick every type you want to practice</p>
 
           <div class="landing-section-label">Question Types</div>
           <div class="setup-types">
@@ -2369,7 +2459,16 @@ Progress</div>
             <label class="setup-type-chip"><input type="checkbox" value="Strengths & Growth"><span class="box"></span><span class="setup-type-name">Strengths &amp; Growth</span></label>
             <label class="setup-type-chip"><input type="checkbox" value="Closing" checked><span class="box"></span><span class="setup-type-name">Closing</span></label>
           </div>
+        </div>
 
+        <!-- STEP 3: CUSTOMIZE & GENERATE -->
+        <div class="setup-step" data-step="3">
+          <h2 class="setup-heading">Customize your questions</h2>
+          <p class="setup-sub">Generate, review, regenerate until it feels right</p>
+
+          <div class="landing-section-label">Final Touches</div>
+          <textarea id="setup-notes" class="setup-input" style="min-height:64px"
+                    placeholder="Anything else? Team, tech stack, what you're nervous about…"></textarea>
           <div style="height:12px"></div>
           <div class="setup-count-row">
             <span class="setup-count-label">Number of Questions</span>
@@ -2382,15 +2481,19 @@ Progress</div>
 
           <button class="setup-generate-btn" id="setup-generate-btn" type="button">Generate Questions</button>
           <div class="setup-error" id="setup-error"></div>
-        </div>
 
-        <!-- RIGHT: generated questions -->
-        <div class="setup-col">
           <div class="landing-section-label">Your Questions</div>
           <div class="setup-questions" id="setup-questions">
-            <div class="setup-q-empty">Configure on the left,<br>then generate your custom question set</div>
+            <div class="setup-q-empty">Generate your custom question set above</div>
           </div>
           <button class="setup-start-btn" id="setup-start-btn" type="button">Start Interview →</button>
+        </div>
+
+        <!-- Wizard navigation -->
+        <div class="setup-nav">
+          <button class="setup-nav-btn" id="setup-prev-step" type="button" style="visibility:hidden">← Back</button>
+          <div class="setup-error" id="setup-step-error" style="margin-top:0"></div>
+          <button class="setup-nav-btn primary" id="setup-next-step" type="button">Continue →</button>
         </div>
       </div>
     </div>
@@ -2445,10 +2548,43 @@ Progress</div>
 
     const $ = (id) => document.getElementById(id);
 
-    // Show selected mode in the chip when arriving from screen 1
+    // ── Wizard step navigation ──
+    const TOTAL_STEPS = 3;
+    let step = 1;
+
+    function showStep(n) {
+      step = Math.max(1, Math.min(TOTAL_STEPS, n));
+      document.querySelectorAll('.setup-step').forEach(el =>
+        el.classList.toggle('active', +el.dataset.step === step));
+      document.querySelectorAll('.setup-prog-step').forEach(el => {
+        el.classList.toggle('active', +el.dataset.step === step);
+        el.classList.toggle('done',   +el.dataset.step < step);
+      });
+      $('setup-prev-step').style.visibility = step === 1 ? 'hidden' : 'visible';
+      $('setup-next-step').style.display    = step === TOTAL_STEPS ? 'none' : '';
+      $('setup-step-error').style.display   = 'none';
+    }
+
+    $('setup-next-step').addEventListener('click', () => {
+      // Step 2 requires at least one interview type before continuing
+      if (step === 2 && selectedTypes().length === 0) {
+        const err = $('setup-step-error');
+        err.textContent = 'Select at least one question type.';
+        err.style.display = 'block';
+        return;
+      }
+      showStep(step + 1);
+    });
+    $('setup-prev-step').addEventListener('click', () => showStep(step - 1));
+
+    // Arriving from screen 1: show mode, restart wizard, prefill the job
+    // description from the landing page if one was pasted there
     document.querySelectorAll('.profile-card').forEach(card => {
       card.addEventListener('click', () => {
         $('setup-mode-chip').textContent = `Mode: ${card.dataset.id.toUpperCase()}`;
+        const landingJd = document.getElementById('job-description-input')?.value?.trim();
+        if (landingJd && !$('setup-jd').value.trim()) $('setup-jd').value = landingJd;
+        showStep(1);
       });
     });
 
@@ -2558,7 +2694,8 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
       const role    = $('setup-role').value.trim();
       const company = $('setup-company').value.trim();
       const notes   = $('setup-notes').value.trim();
-      const jd      = document.getElementById('job-description-input')?.value?.trim();
+      const jd      = $('setup-jd').value.trim()
+                      || document.getElementById('job-description-input')?.value?.trim();
       const apiKey  = document.getElementById('api-key-input')?.value?.trim();
       const profile = document.getElementById('topbar-profile-label')?.textContent;
 
