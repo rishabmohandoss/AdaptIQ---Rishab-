@@ -4116,7 +4116,8 @@ const ClaudeClient = (() => {
     const { profile, signals, transcript, flagType, message } = context;
     const profileId = profile?.id || 'interview_coach';
     const systemPrompt = SYSTEM_PROMPTS[profileId] || SYSTEM_PROMPTS.interview_coach;
-    const userMsg = `Flag triggered: ${flagType}. CES=${(signals.ces || 0).toFixed(0)}. Transcript: "${(transcript || '').slice(-200)}". Respond briefly and helpfully.`;
+    const coachResume = (window.ResumeText || '').slice(0, 1500);
+    const userMsg = `Flag triggered: ${flagType}. CES=${(signals.ces || 0).toFixed(0)}. Transcript: "${(transcript || '').slice(-200)}".${coachResume ? ` Candidate's resume (for context — reference their real experience when it helps): "${coachResume}".` : ''} Respond briefly and helpfully.`;
 
     if (!apiKey) { Bus.emit('intervention:trigger', { action: 'claude_response', message, done: true }); return; }
 
@@ -4201,7 +4202,7 @@ const ClaudeClient = (() => {
           model: 'claude-haiku-4-5',
           max_tokens: 400,
           system: 'You are a professional interview coach writing a session debrief. Be constructive, specific, and encouraging.',
-          messages: [{ role: 'user', content: `Write a professional debrief for this interview practice session.\n\nSession data:\n${JSON.stringify(sessionData, null, 2)}\n\nInclude: overall performance summary, 2 strengths, 2 areas to improve, and 2 actionable tips.` }],
+          messages: [{ role: 'user', content: `Write a professional debrief for this interview practice session.\n\nSession data:\n${JSON.stringify(sessionData, null, 2)}\n${(window.ResumeText || '') ? `\nCandidate's resume:\n${window.ResumeText.slice(0, 3000)}\n\nWhere relevant, connect the feedback to their actual background — e.g. how to better present specific projects or experience from the resume.\n` : ''}\nInclude: overall performance summary, 2 strengths, 2 areas to improve, and 2 actionable tips.` }],
         }),
       });
       if (!resp.ok) return null;

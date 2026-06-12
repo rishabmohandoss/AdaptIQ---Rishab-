@@ -1035,7 +1035,7 @@ window.AdaptIQ_UI = (() => {
               max_tokens: 2000,
               messages: [{
                 role: 'user',
-                content: `You are a supportive interview coach writing a session report for a neurodivergent job seeker (profile: ${profile}). For each question below, write 2-3 plain-English sentences about what went well, what to improve, and one concrete tip. Be warm, specific, and never use jargon or acronyms. Return a JSON array where each element has "q" (question number) and "note" fields only. Data: ${JSON.stringify(snapshots)}`,
+                content: `You are a supportive interview coach writing a session report for a neurodivergent job seeker (profile: ${profile}). For each question below, write 2-3 plain-English sentences about what went well, what to improve, and one concrete tip. Be warm, specific, and never use jargon or acronyms.${(window.ResumeText || '') ? ` The candidate's resume is provided — where it helps, tie tips to their real background (projects, jobs, skills) so advice is concrete. Resume: "${window.ResumeText.slice(0, 3000)}".` : ''} Return a JSON array where each element has "q" (question number) and "note" fields only. Data: ${JSON.stringify(snapshots)}`,
               }],
             }),
           });
