@@ -21,6 +21,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/meyda/dist/web/meyda.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Monaco Editor (technical-question code sandbox, Phase 9) -->
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
@@ -2238,6 +2240,42 @@
     }
     .signal-pill-value { font-size: 16px; font-weight: 500; }
 
+    /* ── Code sandbox panel (Phase 9) ── */
+    .code-panel {
+      left: 50%; right: auto; bottom: 16px;
+      transform: translateX(-50%);
+      width: min(560px, 92%); max-height: 70%;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-bright);
+      display: none;
+      flex-direction: column;
+    }
+    .code-panel.visible { display: flex; }
+    .code-panel-header-right { display: flex; align-items: center; gap: 8px; }
+    .code-language-select {
+      background: rgba(var(--overlay-rgb),0.07);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: inherit; font-size: 11px;
+      padding: 4px 6px;
+    }
+    .monaco-editor-container {
+      height: 280px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-top: 10px;
+      border: 1px solid var(--border);
+    }
+    .code-panel-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-top: 10px;
+    }
+    .code-results {
+      flex: 1; font-size: 11px; color: var(--text-secondary);
+      max-height: 60px; overflow-y: auto;
+    }
+
     /* ── Question bar ── */
     .question-bar {
       background: var(--bg-surface);
@@ -3057,6 +3095,27 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
           </div>
         </div>
       </div>
+
+      <!-- PANEL D — Code Sandbox (technical questions only) -->
+      <div class="overlay-panel code-panel" id="panel-code">
+        <div class="overlay-panel-header">
+          <span class="overlay-panel-title">Code Sandbox</span>
+          <div class="code-panel-header-right">
+            <select id="code-language-select" class="code-language-select">
+              <option value="javascript">JavaScript</option>
+              <option value="python">Python</option>
+              <option value="java">Java</option>
+              <option value="cpp">C++</option>
+            </select>
+            <button class="overlay-panel-close" data-panel="code"><i class="ti ti-x"></i></button>
+          </div>
+        </div>
+        <div id="monaco-editor-container" class="monaco-editor-container"></div>
+        <div class="code-panel-footer">
+          <div id="code-results" class="code-results"></div>
+          <button class="qnav-btn qnav-primary" id="btn-submit-code">Run &amp; Submit</button>
+        </div>
+      </div>
     </div>
 
     <!-- QUESTION BAR -->
@@ -3094,6 +3153,10 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
         <button class="panel-toggle-btn" id="btn-signals" data-panel="signals">
           <i class="ti ti-activity"></i>
           <span>Signals</span>
+        </button>
+        <button class="panel-toggle-btn" id="btn-code" data-panel="code" style="display:none;">
+          <i class="ti ti-code"></i>
+          <span>Code</span>
         </button>
       </div>
 
@@ -4438,6 +4501,21 @@ const InterventionDispatcher = (() => {
     });
   });
 
+  // Technical-question code sandbox (Phase 9) — once a real backend exists
+  // and emits sandbox:result after executing submitted code, this triggers
+  // LLM feedback on algorithmic efficiency (not correctness — the sandbox's
+  // hidden test cases already judge that deterministically).
+  Bus.on('sandbox:result', (result) => {
+    if (!activeProfile || !result) return;
+    window.ClaudeClient?.generate({
+      profile: activeProfile,
+      signals: { ces: window.AnomalyDetector ? AnomalyDetector.getCES() : 0 },
+      requestType: 'sandbox_feedback',
+      sandboxResult: result,
+      message: 'Here\'s feedback on your solution\'s efficiency.',
+    });
+  });
+
   return { init, getLog() { return [...interventionLog]; }, reset() { interventionLog = []; lastInterventionTime = 0; } };
 })();
 
@@ -4477,12 +4555,14 @@ const ClaudeClient = (() => {
   }
 
   async function generate(context) {
-    const { profile, signals, transcript, flagType, message, requestType, questionText } = context;
+    const { profile, signals, transcript, flagType, message, requestType, questionText, sandboxResult } = context;
     const systemPrompt = systemPromptFor(profile);
     const coachResume = (window.ResumeText || '').slice(0, 1500);
     const resumeNote = coachResume ? ` Candidate's resume (for context — reference their real experience when it helps): "${coachResume}".` : '';
     const userMsg = requestType === 'help'
       ? `The candidate tapped "Help" while answering: "${questionText || ''}". Recent transcript (last 60s): "${(transcript || '').slice(-600)}".${resumeNote} Give one brief, encouraging tip to help them answer this specific question well.`
+      : requestType === 'sandbox_feedback'
+      ? `The candidate submitted a coding solution that passed ${sandboxResult.passed}/${sandboxResult.total} hidden test cases, with time complexity O(${sandboxResult.timeComplexity || '?'}) and space complexity O(${sandboxResult.spaceComplexity || '?'}). Give one brief tip on the algorithmic efficiency of their approach — do not comment on correctness, that's already judged.`
       : `Flag triggered: ${flagType}. CES=${(signals.ces || 0).toFixed(0)}. Transcript: "${(transcript || '').slice(-200)}".${resumeNote} Respond briefly and helpfully.`;
 
     if (!apiKey) { Bus.emit('intervention:trigger', { action: 'claude_response', message, done: true }); return; }

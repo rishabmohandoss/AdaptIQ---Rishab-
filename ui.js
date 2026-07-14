@@ -224,6 +224,7 @@ window.AdaptIQ_UI = (() => {
     initLayoutModes();
     initCanvasResizeSync();
     initHelpButton();
+    initCodeSandbox();
     setMode('simple');
   }
 
@@ -235,6 +236,7 @@ window.AdaptIQ_UI = (() => {
       coach:   { btn: 'btn-coach',   panel: 'panel-coach' },
       score:   { btn: 'btn-score',   panel: 'panel-score' },
       signals: { btn: 'btn-signals', panel: 'panel-signals' },
+      code:    { btn: 'btn-code',    panel: 'panel-code' },
     };
 
     function closeAll() {
@@ -255,12 +257,120 @@ window.AdaptIQ_UI = (() => {
         if (!isOpen) {
           panelEl.classList.add('visible');
           btnEl.classList.add('active');
+          if (key === 'code') initMonacoEditor();
         }
       });
 
       // Close button inside panel
       panelEl.querySelector('.overlay-panel-close')?.addEventListener('click', closeAll);
     });
+  }
+
+  // ============================================================
+  // CODE SANDBOX (technical questions — Monaco editor, Phase 9)
+  // ============================================================
+  let monacoEditorInstance = null;
+
+  // Loaded lazily on first open — Monaco is heavy and most sessions never
+  // hit a technical question.
+  function initMonacoEditor() {
+    if (monacoEditorInstance || typeof require === 'undefined' || !require.config) return;
+
+    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+    require(['vs/editor/editor.main'], () => {
+      const container = document.getElementById('monaco-editor-container');
+      if (!container || monacoEditorInstance) return;
+      monacoEditorInstance = monaco.editor.create(container, {
+        value: '// Write your solution here\n',
+        language: 'javascript',
+        theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'vs' : 'vs-dark',
+        automaticLayout: true,
+        minimap: { enabled: false },
+        fontSize: 13,
+      });
+
+      document.getElementById('code-language-select')?.addEventListener('change', (e) => {
+        monaco.editor.setModelLanguage(monacoEditorInstance.getModel(), e.target.value);
+      });
+    });
+  }
+
+  // Shows/hides the Code panel toggle based on whether the active question
+  // is a technical/coding question, and auto-opens the panel when arriving
+  // on one so the editor is immediately visible.
+  function updateCodePanelVisibility(qData) {
+    const btn = document.getElementById('btn-code');
+    if (!btn) return;
+    const isTechnical = qData && qData.cat === 'Technical';
+    btn.style.display = isTechnical ? '' : 'none';
+    if (isTechnical) {
+      document.getElementById('panel-code')?.classList.add('visible');
+      btn.classList.add('active');
+      initMonacoEditor();
+    } else {
+      document.getElementById('panel-code')?.classList.remove('visible');
+      btn.classList.remove('active');
+    }
+  }
+
+  // Sends the current editor contents to a server-side execution sandbox.
+  // No backend exists yet (Firebase Functions doesn't suit arbitrary code
+  // execution) — this is the wired submission path, ready to point at real
+  // infra. It fails gracefully with a clear message rather than a silent
+  // console error, and the result shape it expects
+  // ({ passed, total, timeComplexity, spaceComplexity }) is what a future
+  // backend should return so renderSandboxResult() needs no changes.
+  async function submitCode() {
+    const resultsEl = document.getElementById('code-results');
+    const submitBtn = document.getElementById('btn-submit-code');
+    if (!resultsEl || !monacoEditorInstance) return;
+
+    const code     = monacoEditorInstance.getValue();
+    const language = document.getElementById('code-language-select')?.value || 'javascript';
+    const qm       = window.QuestionManager;
+    const qData    = qm ? qm.get(state.questionIndex) : null;
+
+    resultsEl.textContent = 'Submitting…';
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      const resp = await fetch('/api/sandbox/execute', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code, language, question: qData?.q || '' }),
+      });
+      if (!resp.ok) throw new Error(`Sandbox returned HTTP ${resp.status}`);
+      const result = await resp.json();
+      renderSandboxResult(result);
+      if (typeof Bus !== 'undefined') Bus.emit('sandbox:result', result);
+    } catch (err) {
+      console.warn('[Sandbox] execution backend not configured yet:', err.message);
+      resultsEl.innerHTML = '<span style="color:var(--red)">⚠ Code execution backend isn\'t configured yet — this editor and submission flow are wired and ready for when it is.</span>';
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  }
+
+  function renderSandboxResult(result) {
+    const resultsEl = document.getElementById('code-results');
+    if (!resultsEl || !result) return;
+    const { passed, total, timeComplexity, spaceComplexity } = result;
+    const passColor = passed === total ? 'var(--green)' : 'var(--yellow)';
+    resultsEl.innerHTML =
+      `<span style="color:${passColor}">${passed}/${total} tests passed</span>` +
+      (timeComplexity ? ` · O(${timeComplexity}) time` : '') +
+      (spaceComplexity ? ` · O(${spaceComplexity}) space` : '');
+  }
+
+  function initCodeSandbox() {
+    document.getElementById('btn-submit-code')?.addEventListener('click', submitCode);
+    if (typeof Bus !== 'undefined') {
+      Bus.on('question:changed', ({ index }) => {
+        const qm = window.QuestionManager;
+        const qData = qm ? qm.get(index) : null;
+        updateCodePanelVisibility(qData);
+      });
+    }
   }
 
   // ============================================================

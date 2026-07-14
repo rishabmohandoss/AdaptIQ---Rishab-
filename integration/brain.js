@@ -441,6 +441,21 @@ const InterventionDispatcher = (() => {
     window.ClaudeClient?.generate(context);
   });
 
+  // Technical-question code sandbox (Phase 9) — once a real backend exists
+  // and emits sandbox:result after executing submitted code, this triggers
+  // LLM feedback on algorithmic efficiency (not correctness — the sandbox's
+  // hidden test cases already judge that deterministically).
+  Bus.on('sandbox:result', (result) => {
+    if (!activeProfile || !result) return;
+    window.ClaudeClient?.generate({
+      profile: activeProfile,
+      signals: { ces: window.AnomalyDetector ? AnomalyDetector.getCES() : 0 },
+      requestType: 'sandbox_feedback',
+      sandboxResult: result,
+      message: 'Here\'s feedback on your solution\'s efficiency.',
+    });
+  });
+
   return {
     init,
     getLog()  { return [...interventionLog]; },
@@ -484,10 +499,12 @@ const ClaudeClient = (() => {
   }
 
   async function generate(context) {
-    const { profile, signals, transcript, flagType, message, requestType, questionText } = context;
+    const { profile, signals, transcript, flagType, message, requestType, questionText, sandboxResult } = context;
     const systemPrompt = systemPromptFor(profile);
     const userMsg = requestType === 'help'
       ? `The candidate tapped "Help" while answering: "${questionText || ''}". Recent transcript (last 60s): "${(transcript || '').slice(-600)}". Give one brief, encouraging tip to help them answer this specific question well.`
+      : requestType === 'sandbox_feedback'
+      ? `The candidate submitted a coding solution that passed ${sandboxResult.passed}/${sandboxResult.total} hidden test cases, with time complexity O(${sandboxResult.timeComplexity || '?'}) and space complexity O(${sandboxResult.spaceComplexity || '?'}). Give one brief tip on the algorithmic efficiency of their approach — do not comment on correctness, that's already judged.`
       : `Flag triggered: ${flagType}. CES=${(signals.ces || 0).toFixed(0)}. Transcript: "${(transcript || '').slice(-200)}". Respond briefly and helpfully.`;
 
     if (!apiKey) {
