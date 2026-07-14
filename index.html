@@ -4450,8 +4450,8 @@ const ClaudeClient = (() => {
   let apiKey = null;
 
   const SYSTEM_PROMPTS = {
-    interview_coach:  'You are a professional interview coach. Give direct, actionable feedback. Reference specific behaviors (eye contact, pacing, filler words). Keep responses under 3 sentences.',
-    language_teacher: 'You are a friendly language teacher. Simplify your vocabulary. If the student is struggling, rephrase or offer an easier alternative. Keep responses under 2 sentences.',
+    interview_coach:  'You are a professional interview coach. Give direct, actionable feedback. Reference specific behaviors (eye contact, pacing, filler words). Keep responses under 3 sentences. Do not use markdown formatting (no #, no **, no bullet points) — write in plain sentences.',
+    language_teacher: 'You are a friendly language teacher. Simplify your vocabulary. If the student is struggling, rephrase or offer an easier alternative. Keep responses under 2 sentences. Do not use markdown formatting (no #, no **, no bullet points) — write in plain sentences.',
   };
 
   // Coaching guidance per weakness (Phase 1's ProfileConfig.build) — injected
@@ -4473,7 +4473,7 @@ const ClaudeClient = (() => {
 
     const notes = (profile?.weaknesses || []).map(w => WEAKNESS_COACHING_NOTES[w]).filter(Boolean);
     const tailored = notes.length ? ` Keep in mind: ${notes.join('; ')}.` : '';
-    return `You are a warm, encouraging interview coach for a neurodivergent job seeker.${tailored} Keep responses under 2-3 sentences and avoid jargon.`;
+    return `You are a warm, encouraging interview coach for a neurodivergent job seeker.${tailored} Keep responses under 2-3 sentences and avoid jargon. Do not use markdown formatting (no #, no **, no bullet points) — write in plain sentences.`;
   }
 
   async function generate(context) {
@@ -4567,7 +4567,7 @@ const ClaudeClient = (() => {
         body: JSON.stringify({
           model: 'claude-haiku-4-5',
           max_tokens: 400,
-          system: 'You are a professional interview coach writing a session debrief. Be constructive, specific, and encouraging.',
+          system: 'You are a professional interview coach writing a session debrief. Be constructive, specific, and encouraging. Do not use markdown formatting (no #, no **, no bullet points) — write in plain sentences.',
           messages: [{ role: 'user', content: `Write a professional debrief for this interview practice session.\n\nSession data:\n${JSON.stringify(sessionData, null, 2)}\n${(window.ResumeText || '') ? `\nCandidate's resume:\n${window.ResumeText.slice(0, 3000)}\n\nWhere relevant, connect the feedback to their actual background — e.g. how to better present specific projects or experience from the resume.\n` : ''}\nInclude: overall performance summary, 2 strengths, 2 areas to improve, and 2 actionable tips.` }],
         }),
       });

@@ -337,7 +337,7 @@ window.AdaptIQ_UI = (() => {
       document.getElementById('btn-signals')?.classList.remove('active');
 
       state.coachBuffer = '';
-      updateCoachPanel('<em>Thinking…</em>', true);
+      updateCoachPanel('Thinking…', true);
 
       Bus.emit('help:requested', { questionText, questionIndex: state.questionIndex });
     });
@@ -868,10 +868,59 @@ window.AdaptIQ_UI = (() => {
     console.log('[AdaptIQ Intervention]', data.action || 'adaptive break');
   }
 
+  // ============================================================
+  // MARKDOWN → HTML (lightweight, regex-based)
+  // ============================================================
+  // LLM responses default to markdown (headers, bullets, bold) even when
+  // asked for plain text — this renders it instead of leaking raw
+  // #/*/- characters into the UI.
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function inlineMarkdown(s) {
+    return s
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/__(.+?)__/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/_(.+?)_/g, '<em>$1</em>');
+  }
+
+  function renderMarkdown(text) {
+    if (!text) return '';
+    const lines = escapeHtml(text).split('\n');
+    let html = '';
+    let inList = false;
+
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      const listMatch = trimmed.match(/^[*-]\s+(.*)$/);
+      const headingMatch = trimmed.match(/^#{1,6}\s+(.*)$/);
+
+      if (listMatch) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += `<li>${inlineMarkdown(listMatch[1])}</li>`;
+        return;
+      }
+      if (inList) { html += '</ul>'; inList = false; }
+
+      if (headingMatch) {
+        html += `<strong>${inlineMarkdown(headingMatch[1])}</strong><br>`;
+      } else if (trimmed) {
+        html += `${inlineMarkdown(trimmed)}<br>`;
+      } else {
+        html += '<br>';
+      }
+    });
+
+    if (inList) html += '</ul>';
+    return html;
+  }
+
   function updateCoachPanel(text, final) {
     const el = document.getElementById('coach-tip-text');
     if (!el || !text) return;
-    el.innerHTML = text.replace(/\n/g, '<br>') + (final ? '' : ' <span style="opacity:0.5">▌</span>');
+    el.innerHTML = renderMarkdown(text) + (final ? '' : ' <span style="opacity:0.5">▌</span>');
   }
 
   // ============================================================
@@ -1388,7 +1437,7 @@ window.AdaptIQ_UI = (() => {
     });
     Bus.on('session:debrief', ({ text }) => {
       const insightsEl = document.getElementById('summary-insights');
-      if (insightsEl && text) insightsEl.textContent = text;
+      if (insightsEl && text) insightsEl.innerHTML = renderMarkdown(text);
     });
 
     // Sensor dot wiring — camera handled via handleFaceSignal → updateVideoStatus
