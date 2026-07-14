@@ -2562,11 +2562,58 @@ Progress</div>
           throw new Error('unsupported'); // legacy .doc etc.
         }
 
+        // ── Structured entity extraction (Phase 10) ──
+        // Prefers a background Worker (off the main thread); classic Workers
+        // can throw under a file:// origin (no bundler/server here), so this
+        // falls back to running the same logic inline on the main thread —
+        // resumes are short enough that the fallback is still instant.
+        window.ResumeMetadata = null;
+        let resumeWorker;
+        try { resumeWorker = new Worker('resume-worker.js'); } catch (e) { resumeWorker = null; }
+
+        function extractResumeEntitiesFallback(text) {
+          const LANGUAGES = ['JavaScript','TypeScript','Python','Java','C++','C#','Go','Rust','Ruby','PHP','Swift','Kotlin','Scala','R','MATLAB','SQL','HTML','CSS','Shell','Bash','Perl','Objective-C','Dart','Elixir','Haskell'];
+          const FRAMEWORKS = ['React','Angular','Vue','Next.js','Node.js','Express','Django','Flask','FastAPI','Spring','Spring Boot','Rails','Laravel','.NET','ASP.NET','TensorFlow','PyTorch','Keras','scikit-learn','Pandas','NumPy','Redux','GraphQL','Docker','Kubernetes','AWS','Azure','GCP','Firebase','MongoDB','PostgreSQL','MySQL','Redis','Jenkins','Terraform','Webpack','jQuery','Bootstrap','Tailwind','Svelte','Flutter','Unity'];
+          const findMatches = (dict) => dict.filter(term => {
+            const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return new RegExp(`(?<![a-zA-Z0-9])${escaped}(?![a-zA-Z0-9])`, 'i').test(text);
+          });
+          let years = 0;
+          (text.match(/(\d+(?:\.\d+)?)\+?\s*years?/gi) || []).forEach(m => {
+            const n = parseFloat(m);
+            if (!isNaN(n) && n < 50) years = Math.max(years, n);
+          });
+          const now = new Date().getFullYear();
+          let rangeTotal = 0;
+          (text.match(/(19|20)\d{2}\s*[-–—]\s*((19|20)\d{2}|present|current)/gi) || []).forEach(r => {
+            const parts = r.match(/(19|20)\d{2}|present|current/gi) || [];
+            const start = parseInt(parts[0], 10);
+            const end = /present|current/i.test(parts[1]) ? now : parseInt(parts[1], 10);
+            if (!isNaN(start) && !isNaN(end) && end >= start) rangeTotal += (end - start);
+          });
+          return {
+            languages: findMatches(LANGUAGES),
+            frameworks: findMatches(FRAMEWORKS),
+            tenureYears: Math.round(Math.max(years, rangeTotal) * 10) / 10,
+          };
+        }
+
+        function extractResumeMetadata(text) {
+          if (resumeWorker) {
+            resumeWorker.onmessage = (e) => { window.ResumeMetadata = e.data; };
+            resumeWorker.onerror = () => { window.ResumeMetadata = extractResumeEntitiesFallback(text); };
+            resumeWorker.postMessage({ text });
+          } else {
+            window.ResumeMetadata = extractResumeEntitiesFallback(text);
+          }
+        }
+
         document.getElementById('resume-upload').addEventListener('change', async (e) => {
           const file = e.target.files[0];
           const zone = document.getElementById('resume-zone');
           const text = document.getElementById('resume-zone-text');
           window.ResumeText = '';
+          window.ResumeMetadata = null;
           if (!file) {
             text.textContent = 'Drop your resume here or browse';
             zone.classList.remove('has-file');
@@ -2577,6 +2624,7 @@ Progress</div>
             const extracted = (await extractResumeText(file)).replace(/\s+/g, ' ').trim();
             if (extracted.length < 30) throw new Error('empty');
             window.ResumeText = extracted;
+            extractResumeMetadata(extracted);
             text.textContent = `✓ ${file.name} — resume understood`;
             zone.classList.add('has-file');
           } catch (err) {
@@ -2876,6 +2924,10 @@ Progress</div>
 
     async function claudeGenerate(apiKey, types, role, company, notes, jd, profile) {
       const resume = (window.ResumeText || '').slice(0, 8000);
+      const meta = window.ResumeMetadata;
+      const metaBlock = meta && (meta.languages.length || meta.frameworks.length || meta.tenureYears > 0)
+        ? `\nExtracted from resume — languages: ${meta.languages.join(', ') || 'none detected'}; frameworks/tools: ${meta.frameworks.join(', ') || 'none detected'}; estimated experience: ${meta.tenureYears || '?'} years.\nIf "Technical" is an allowed question type, target technical questions at these SPECIFIC languages/frameworks (not generic CS trivia) and calibrate difficulty to the estimated experience level (junior/mid/senior). Calibrate behavioral question depth the same way — a candidate with more tenure should get questions probing leadership/ownership, not just individual tasks.`
+        : '';
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -2895,7 +2947,7 @@ Role: ${role || 'not specified'}
 Company: ${company || 'not specified'}
 Job description: ${jd || 'not provided'}
 Additional notes from the candidate: ${notes || 'none'}
-Candidate's resume: ${resume || 'not provided'}
+Candidate's resume: ${resume || 'not provided'}${metaBlock}
 
 Only use these question types: ${types.join(', ')}.
 ${resume ? 'Ground several questions in SPECIFIC items from the resume — real projects, employers, skills, or education it mentions (e.g. "Tell me about your work on X at Y"). Also probe gaps between the resume and the job requirements.' : ''}
