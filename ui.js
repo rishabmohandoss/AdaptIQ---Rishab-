@@ -223,6 +223,7 @@ window.AdaptIQ_UI = (() => {
     initCameraViewModes();
     initLayoutModes();
     initCanvasResizeSync();
+    initHelpButton();
     setMode('simple');
   }
 
@@ -309,6 +310,37 @@ window.AdaptIQ_UI = (() => {
     });
 
     document.addEventListener('mouseup', () => { dragging = false; });
+  }
+
+  // ============================================================
+  // ON-DEMAND HELP
+  // ============================================================
+  // ui.js stays decoupled from brain.js/sensors.js — it only knows the
+  // current question, and emits a Bus event so the integration layer
+  // (which already owns AudioEngine/ClaudeClient/the active profile) can
+  // gather transcript context and call the LLM.
+  function initHelpButton() {
+    const btn = document.getElementById('btn-help');
+    if (!btn || typeof Bus === 'undefined') return;
+
+    btn.addEventListener('click', () => {
+      const qm = window.QuestionManager;
+      const qData = qm ? qm.get(state.questionIndex) : null;
+      const questionText = qData ? qData.q : (document.getElementById('question-text')?.textContent || '');
+
+      // Surface the coach panel so the response is visible when it arrives
+      document.getElementById('panel-coach')?.classList.add('visible');
+      document.getElementById('btn-coach')?.classList.add('active');
+      document.getElementById('panel-score')?.classList.remove('visible');
+      document.getElementById('panel-signals')?.classList.remove('visible');
+      document.getElementById('btn-score')?.classList.remove('active');
+      document.getElementById('btn-signals')?.classList.remove('active');
+
+      state.coachBuffer = '';
+      updateCoachPanel('<em>Thinking…</em>', true);
+
+      Bus.emit('help:requested', { questionText, questionIndex: state.questionIndex });
+    });
   }
 
   // ============================================================

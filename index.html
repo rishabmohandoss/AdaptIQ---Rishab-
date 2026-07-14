@@ -3072,6 +3072,7 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
           <button class="layout-toggle-btn" data-layout="focus" title="Focus on question">Focus</button>
           <button class="layout-toggle-btn" data-layout="pip" title="Picture-in-picture camera">PiP</button>
         </div>
+        <button class="qnav-btn" id="btn-help" title="Get a tip for this question">💡 Help</button>
         <button class="qnav-btn" id="btn-prev-q" disabled>← Prev</button>
         <button class="qnav-btn qnav-primary" id="btn-next-q">Next →</button>
       </div>
@@ -4413,6 +4414,30 @@ const InterventionDispatcher = (() => {
     }
   });
 
+  // On-demand help — ui.js stays decoupled from ClaudeClient/AudioEngine and
+  // only knows the current question; this listener owns gathering context.
+  // Not gated by the intervention cooldown: a manual click is an explicit
+  // request, not an anomaly-driven interruption.
+  Bus.on('help:requested', ({ questionText } = {}) => {
+    if (!activeProfile) return;
+    const now = Date.now();
+    const allSegments = window.AudioEngine && AudioEngine.getTranscriptSegments
+      ? AudioEngine.getTranscriptSegments()
+      : [];
+    const recentTranscript = allSegments
+      .filter(s => now - s.timestamp <= 60000)
+      .map(s => s.text)
+      .join(' ');
+    window.ClaudeClient?.generate({
+      profile: activeProfile,
+      signals: { ces: window.AnomalyDetector ? AnomalyDetector.getCES() : 0 },
+      transcript: recentTranscript,
+      requestType: 'help',
+      questionText: questionText || '',
+      message: "Here's a tip for this question.",
+    });
+  });
+
   return { init, getLog() { return [...interventionLog]; }, reset() { interventionLog = []; lastInterventionTime = 0; } };
 })();
 
@@ -4425,19 +4450,40 @@ const ClaudeClient = (() => {
   let apiKey = null;
 
   const SYSTEM_PROMPTS = {
-    special_needs:    'You are a patient, encouraging tutor for a student with special needs. Use simple words. Be warm and reassuring. Keep responses under 2 sentences.',
     interview_coach:  'You are a professional interview coach. Give direct, actionable feedback. Reference specific behaviors (eye contact, pacing, filler words). Keep responses under 3 sentences.',
     language_teacher: 'You are a friendly language teacher. Simplify your vocabulary. If the student is struggling, rephrase or offer an easier alternative. Keep responses under 2 sentences.',
   };
 
+  // Coaching guidance per weakness (Phase 1's ProfileConfig.build) — injected
+  // into the system prompt for weakness-based custom profiles so real-time
+  // advice targets the user's actual selected pain points.
+  const WEAKNESS_COACHING_NOTES = {
+    stuttering:        'they may stutter or need extra time to get words out — never rush them, and reassure them that pausing is fine',
+    eye_contact:       'they tend to lose eye contact with the camera — gently encourage them to look back at the camera without repeating yourself',
+    distraction:       'they are prone to losing focus — help redirect their attention kindly',
+    speaking_too_fast: 'they tend to speak too quickly when nervous — encourage a slower, steadier pace',
+    anxiety:           'they experience anxiety or stress during interviews — keep your tone calm and reassuring',
+  };
+
   function setApiKey(key) { apiKey = key; }
 
-  async function generate(context) {
-    const { profile, signals, transcript, flagType, message } = context;
+  function systemPromptFor(profile) {
     const profileId = profile?.id || 'interview_coach';
-    const systemPrompt = SYSTEM_PROMPTS[profileId] || SYSTEM_PROMPTS.interview_coach;
+    if (SYSTEM_PROMPTS[profileId]) return SYSTEM_PROMPTS[profileId];
+
+    const notes = (profile?.weaknesses || []).map(w => WEAKNESS_COACHING_NOTES[w]).filter(Boolean);
+    const tailored = notes.length ? ` Keep in mind: ${notes.join('; ')}.` : '';
+    return `You are a warm, encouraging interview coach for a neurodivergent job seeker.${tailored} Keep responses under 2-3 sentences and avoid jargon.`;
+  }
+
+  async function generate(context) {
+    const { profile, signals, transcript, flagType, message, requestType, questionText } = context;
+    const systemPrompt = systemPromptFor(profile);
     const coachResume = (window.ResumeText || '').slice(0, 1500);
-    const userMsg = `Flag triggered: ${flagType}. CES=${(signals.ces || 0).toFixed(0)}. Transcript: "${(transcript || '').slice(-200)}".${coachResume ? ` Candidate's resume (for context — reference their real experience when it helps): "${coachResume}".` : ''} Respond briefly and helpfully.`;
+    const resumeNote = coachResume ? ` Candidate's resume (for context — reference their real experience when it helps): "${coachResume}".` : '';
+    const userMsg = requestType === 'help'
+      ? `The candidate tapped "Help" while answering: "${questionText || ''}". Recent transcript (last 60s): "${(transcript || '').slice(-600)}".${resumeNote} Give one brief, encouraging tip to help them answer this specific question well.`
+      : `Flag triggered: ${flagType}. CES=${(signals.ces || 0).toFixed(0)}. Transcript: "${(transcript || '').slice(-200)}".${resumeNote} Respond briefly and helpfully.`;
 
     if (!apiKey) { Bus.emit('intervention:trigger', { action: 'claude_response', message, done: true }); return; }
 
