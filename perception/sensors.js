@@ -218,6 +218,23 @@ const GazeEngine = (() => {
   const yBuf = new SignalBuffer(30);
   const gazeHistory = [];
 
+  // 1D Kalman filter — smooths MediaPipe iris-landmark micro-jitter before
+  // it reaches GDS, so GDS reflects real gaze drift rather than tracking noise.
+  function makeKalman1D(processNoise = 0.01, measurementNoise = 4) {
+    let estimate = null;
+    let covariance = 1;
+    return function filter(measurement) {
+      if (estimate === null) { estimate = measurement; return estimate; }
+      covariance += processNoise;
+      const gain = covariance / (covariance + measurementNoise);
+      estimate += gain * (measurement - estimate);
+      covariance *= (1 - gain);
+      return estimate;
+    };
+  }
+  let kalmanX = makeKalman1D();
+  let kalmanY = makeKalman1D();
+
   // MediaPipe 478-landmark indices (refineLandmarks: true)
   const L_IRIS = 468, R_IRIS = 473;
   const L_OUTER = 33,  L_INNER = 133, L_TOP = 159, L_BOT = 145;
@@ -260,7 +277,9 @@ const GazeEngine = (() => {
 
     if (!running) return;
 
-    const { x, y } = _irisToScreen(iris);
+    const raw = _irisToScreen(iris);
+    const x = kalmanX(raw.x);
+    const y = kalmanY(raw.y);
     xBuf.push(x);
     yBuf.push(y);
 
@@ -319,6 +338,8 @@ const GazeEngine = (() => {
     return new Promise((resolve) => {
       calibrating  = true;
       calibSamples = [];
+      kalmanX = makeKalman1D();
+      kalmanY = makeKalman1D();
 
       const overlay = document.createElement('div');
       overlay.id = 'gaze-calibration-overlay';

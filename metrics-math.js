@@ -54,14 +54,25 @@ const MetricsMath = {
     const maxLag = Math.min(n - 1, Math.floor(sampleRate / minHz));
     if (minLag >= maxLag) return null;
 
+    // Hann window tapers the frame edges before autocorrelation. Raw frame
+    // boundaries are an abrupt discontinuity that otherwise leaks into the
+    // correlation sum and destabilizes the winning lag frame-to-frame,
+    // showing up as noise in PVS. Applied only here — the loudness gate
+    // above intentionally uses the unwindowed buffer.
+    const windowed = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const w = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (n - 1));
+      windowed[i] = buf[i] * w;
+    }
+
     const corrs = new Float64Array(maxLag + 2);
     let bestCorr = 0, bestLag = -1;
     for (let lag = minLag; lag <= maxLag; lag++) {
       let num = 0, d1 = 0, d2 = 0;
       for (let i = 0; i < n - lag; i++) {
-        num += buf[i] * buf[i + lag];
-        d1  += buf[i] * buf[i];
-        d2  += buf[i + lag] * buf[i + lag];
+        num += windowed[i] * windowed[i + lag];
+        d1  += windowed[i] * windowed[i];
+        d2  += windowed[i + lag] * windowed[i + lag];
       }
       const c = num / Math.sqrt(d1 * d2 + 1e-12);
       corrs[lag] = c;
