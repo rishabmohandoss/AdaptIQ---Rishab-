@@ -215,6 +215,8 @@ window.AdaptIQ_UI = (() => {
 
     initPanelToggles();
     initCameraViewModes();
+    initLayoutModes();
+    initCanvasResizeSync();
     setMode('simple');
   }
 
@@ -304,6 +306,40 @@ window.AdaptIQ_UI = (() => {
   }
 
   // ============================================================
+  // RESIZABLE LAYOUT (split / focus / pip)
+  // ============================================================
+  function initLayoutModes() {
+    const dashMain = document.getElementById('dash-main');
+    const toggle   = document.getElementById('layout-toggle');
+    if (!dashMain || !toggle) return;
+
+    toggle.querySelectorAll('.layout-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const layout = btn.dataset.layout;
+        dashMain.classList.remove('layout-split', 'layout-focus', 'layout-pip');
+        dashMain.classList.add(`layout-${layout}`);
+        toggle.querySelectorAll('.layout-toggle-btn').forEach(b => b.classList.toggle('active', b === btn));
+      });
+    });
+  }
+
+  // ============================================================
+  // CANVAS RESIZE SYNC
+  // ============================================================
+  // The face-mesh overlay canvas must stay pixel-aligned with the video
+  // element even when the grid layout resizes it (split/focus/pip toggle,
+  // or any other container resize) — not just on the next tracking frame.
+  function initCanvasResizeSync() {
+    const videoPanel = document.getElementById('video-panel');
+    if (!videoPanel || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(() => {
+      drawFaceOverlay(lastFaceData);
+    });
+    observer.observe(videoPanel);
+  }
+
+  // ============================================================
   // VIDEO FEED
   // ============================================================
   function initVideoFeed() {
@@ -340,10 +376,14 @@ window.AdaptIQ_UI = (() => {
   // ============================================================
   // FACE OVERLAY RENDERING
   // ============================================================
+  let lastFaceData = null;
+
   function drawFaceOverlay(data) {
     const canvas = document.getElementById('face-overlay-canvas');
     const video  = document.getElementById('video-feed');
     if (!canvas || !video) return;
+
+    if (data) lastFaceData = data;
 
     canvas.width  = video.videoWidth  || canvas.offsetWidth;
     canvas.height = video.videoHeight || canvas.offsetHeight;

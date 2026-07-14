@@ -2114,6 +2114,62 @@
     }
 
     /* ── Video area ── */
+    /* Resizable video/question layout — three preset grid states.
+       .video-area's rendered box changes size with the grid row, which is
+       what the ResizeObserver in ui.js watches to re-sync the canvas. */
+    .dash-main {
+      flex: 1;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .dash-main.layout-split { grid-template-rows: 1fr auto; }
+    .dash-main.layout-focus { grid-template-rows: 220px 1fr; }
+    .dash-main.layout-pip   { grid-template-rows: 1fr; }
+
+    .dash-main.layout-focus .video-area {
+      min-height: 0;
+    }
+    .dash-main.layout-focus .question-bar {
+      overflow-y: auto;
+    }
+    /* position:fixed removes .video-area from grid flow entirely, so the
+       single 1fr row is left for .question-bar to fill on its own. */
+    .dash-main.layout-pip .video-area {
+      position: fixed;
+      width: 220px; height: 150px;
+      right: 20px; bottom: 100px;
+      min-height: 0;
+      border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      z-index: 25;
+    }
+    .dash-main.layout-pip .question-bar {
+      overflow-y: auto;
+    }
+    /* Overlay panels (coach/score/signals) don't fit a 150px PiP box */
+    .dash-main.layout-pip .video-area .overlay-panel {
+      display: none !important;
+    }
+
+    .layout-toggle {
+      display: flex; gap: 4px; margin-right: auto;
+    }
+    .layout-toggle-btn {
+      height: 30px; padding: 0 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit; font-size: 11px; font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: all 150ms;
+    }
+    .layout-toggle-btn:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+    .layout-toggle-btn.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
     .video-area {
       flex: 1; position: relative; background: #000;
       overflow: hidden; min-height: 260px;
@@ -2926,8 +2982,11 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
       </div>
     </div>
 
+    <!-- RESIZABLE VIDEO/QUESTION LAYOUT -->
+    <div class="dash-main layout-split" id="dash-main">
+
     <!-- VIDEO AREA + OVERLAY PANELS -->
-    <div class="video-area">
+    <div class="video-area" id="video-panel">
       <video id="video-feed" autoplay muted playsinline></video>
       <canvas id="face-overlay-canvas"></canvas>
 
@@ -3008,10 +3067,17 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
       </div>
       <div class="question-bar-text" id="question-text">What is your name?</div>
       <div class="question-bar-nav">
+        <div class="layout-toggle" id="layout-toggle" role="group" aria-label="Resize layout">
+          <button class="layout-toggle-btn active" data-layout="split" title="Split view">Split</button>
+          <button class="layout-toggle-btn" data-layout="focus" title="Focus on question">Focus</button>
+          <button class="layout-toggle-btn" data-layout="pip" title="Picture-in-picture camera">PiP</button>
+        </div>
         <button class="qnav-btn" id="btn-prev-q" disabled>← Prev</button>
         <button class="qnav-btn qnav-primary" id="btn-next-q">Next →</button>
       </div>
     </div>
+
+    </div> <!-- /dash-main -->
 
     <!-- BOTTOM CONTROLS -->
     <div class="bottom-controls">
