@@ -3840,7 +3840,11 @@ const AudioEngine = (() => {
   let intervalId = null;
   let running = false;
 
-  let fullTranscript = '';
+  // Structured transcript: [{ timestamp, speaker, text, wpm }], one entry per
+  // finalized speech-recognition result — replaces a single concatenated string
+  // so downstream consumers (session report, live coach) get per-utterance timing.
+  let transcript = [];
+  let lastFinalTime = null;
   let wordTimestamps = [];
 
   const rmsBuf       = new SignalBuffer(30);
@@ -3875,9 +3879,14 @@ const AudioEngine = (() => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const t = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          fullTranscript += t + ' ';
-          const words = t.trim().split(/\s+/).filter(Boolean).length;
-          wordTimestamps.push({ words, time: Date.now() });
+          const now = Date.now();
+          const text = t.trim();
+          const words = text.split(/\s+/).filter(Boolean).length;
+          const elapsedSec = lastFinalTime ? Math.max(1, (now - lastFinalTime) / 1000) : Math.max(1, words / 2.25);
+          const wpm = Math.round(words / (elapsedSec / 60));
+          transcript.push({ timestamp: now, speaker: 'user', text, wpm });
+          lastFinalTime = now;
+          wordTimestamps.push({ words, time: now });
         }
       }
     };
@@ -3964,7 +3973,7 @@ const AudioEngine = (() => {
         silr: Math.round(silr),
         sr: Math.round(sr),
         wpm: wpm != null ? Math.round(wpm) : null,
-        transcript: fullTranscript,
+        transcript: _flatTranscript(),
       };
       Bus.emit('signal:audio', latest);
     } catch (err) {
@@ -3986,12 +3995,16 @@ const AudioEngine = (() => {
     if (intervalId)    clearInterval(intervalId);
   }
 
+  function _flatTranscript() { return transcript.map(s => s.text).join(' '); }
+
   function getLatest()    { return latest; }
-  function getTranscript(){ return fullTranscript; }
+  function getTranscript(){ return _flatTranscript(); }
+  function getTranscriptSegments() { return [...transcript]; }
   function hasSpeechRecognition() { return srSupported; }
 
   function reset() {
-    fullTranscript = '';
+    transcript = [];
+    lastFinalTime = null;
     wordTimestamps = [];
     silenceWindows.length = 0;
     rmsHistory = [];
@@ -4000,7 +4013,7 @@ const AudioEngine = (() => {
     silenceThreshold = 0.01;
   }
 
-  return { init, start, stop, reset, getLatest, getTranscript, hasSpeechRecognition };
+  return { init, start, stop, reset, getLatest, getTranscript, getTranscriptSegments, hasSpeechRecognition };
 })();
 
 window.AudioEngine = AudioEngine;
@@ -4615,6 +4628,9 @@ const SessionManager = (() => {
       flag_log:          window.InterventionDispatcher ? InterventionDispatcher.getLog() : [],
       scores:            window.InterviewScorecard ? InterviewScorecard.getScores() : null,
       transcript:        (window.AudioEngine ? AudioEngine.getTranscript() : '').slice(-2000),
+      // Structured per-utterance transcript ({timestamp, speaker, text, wpm})
+      // for the LLM report payload — richer than the flat string above.
+      transcript_segments: (window.AudioEngine && AudioEngine.getTranscriptSegments) ? AudioEngine.getTranscriptSegments() : [],
       exported_at:       new Date().toISOString(),
     };
     Bus.emit('session:end', { summary: lastSessionData });

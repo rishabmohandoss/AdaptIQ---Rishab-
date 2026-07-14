@@ -661,10 +661,13 @@ const SessionManager = (() => {
     const mins     = Math.floor(duration / 60000);
     const secs     = Math.floor((duration % 60000) / 1000);
 
-    const flagLog   = window.InterventionDispatcher ? InterventionDispatcher.getLog() : [];
-    const scores    = window.InterviewScorecard    ? InterviewScorecard.getScores()  : null;
-    const transcript= window.AudioEngine           ? AudioEngine.getTranscript()     : '';
-    const ces       = window.AnomalyDetector       ? AnomalyDetector.getCES()        : 0;
+    const flagLog     = window.InterventionDispatcher ? InterventionDispatcher.getLog() : [];
+    const scores      = window.InterviewScorecard    ? InterviewScorecard.getScores()  : null;
+    const transcript  = window.AudioEngine           ? AudioEngine.getTranscript()     : '';
+    const transcript_segments = window.AudioEngine && AudioEngine.getTranscriptSegments
+      ? AudioEngine.getTranscriptSegments()
+      : [];
+    const ces         = window.AnomalyDetector       ? AnomalyDetector.getCES()        : 0;
 
     lastSessionData = {
       duration_ms:       duration,
@@ -674,6 +677,9 @@ const SessionManager = (() => {
       flag_log:          flagLog,
       scores,
       transcript:        transcript.slice(-2000),
+      // Structured per-utterance transcript ({timestamp, speaker, text, wpm})
+      // for the LLM report payload — richer than the flat string above.
+      transcript_segments,
       exported_at:       new Date().toISOString(),
     };
 

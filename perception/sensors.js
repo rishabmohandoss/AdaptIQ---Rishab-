@@ -421,7 +421,11 @@ const AudioEngine = (() => {
   let intervalId = null;
   let running = false;
 
-  let fullTranscript = '';
+  // Structured transcript: [{ timestamp, speaker, text, wpm }], one entry per
+  // finalized speech-recognition result — replaces a single concatenated string
+  // so downstream consumers (session report, live coach) get per-utterance timing.
+  let transcript = [];
+  let lastFinalTime = null;
   let wordTimestamps = []; // rolling 60-second window: [{ words, time }]
 
   // Buffers
@@ -457,9 +461,17 @@ const AudioEngine = (() => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const t = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          fullTranscript += t + ' ';
-          const words = t.trim().split(/\s+/).filter(Boolean).length;
-          wordTimestamps.push({ words, time: Date.now() });
+          const now = Date.now();
+          const text = t.trim();
+          const words = text.split(/\s+/).filter(Boolean).length;
+          // Per-utterance WPM: words over elapsed time since the previous
+          // finalized segment (first segment falls back to a ~135 WPM
+          // estimate since there's no prior segment to measure against).
+          const elapsedSec = lastFinalTime ? Math.max(1, (now - lastFinalTime) / 1000) : Math.max(1, words / 2.25);
+          const wpm = Math.round(words / (elapsedSec / 60));
+          transcript.push({ timestamp: now, speaker: 'user', text, wpm });
+          lastFinalTime = now;
+          wordTimestamps.push({ words, time: now });
         } else {
           interim += t;
         }
@@ -534,7 +546,7 @@ const AudioEngine = (() => {
         pvs: Math.round(pvs),
         silr: Math.round(silr),
         sr: Math.round(sr),
-        transcript: fullTranscript,
+        transcript: _flatTranscript(),
       };
       Bus.emit('signal:audio', latest);
     } catch (err) {
@@ -556,18 +568,22 @@ const AudioEngine = (() => {
     if (intervalId)    clearInterval(intervalId);
   }
 
+  function _flatTranscript() { return transcript.map(s => s.text).join(' '); }
+
   function getLatest()    { return latest; }
-  function getTranscript(){ return fullTranscript; }
+  function getTranscript(){ return _flatTranscript(); }
+  function getTranscriptSegments() { return [...transcript]; }
 
   function reset() {
-    fullTranscript = '';
+    transcript = [];
+    lastFinalTime = null;
     wordTimestamps = [];
     silenceWindows.length = 0;
     ambientSamples = [];
     silenceThreshold = 0.01;
   }
 
-  return { init, start, stop, reset, getLatest, getTranscript };
+  return { init, start, stop, reset, getLatest, getTranscript, getTranscriptSegments };
 })();
 
 window.AudioEngine = AudioEngine;
