@@ -51,6 +51,9 @@ window.AdaptIQ_UI = (() => {
     questionSnapshots: Array.from({ length: 30 }, () => ({
       eyeContact: 0, headStability: 0, vocalConfidence: 0, speechClarity: 0, samples: 0, claritySamples: 0
     })),
+    // Timestamp each question became active, so transcript segments (Phase 5)
+    // can be sliced by time range and attributed to the right question.
+    questionStartTimes: {},
     coachBuffer: '',
   };
 
@@ -192,6 +195,9 @@ window.AdaptIQ_UI = (() => {
     if (typeof Bus !== 'undefined') {
       Bus.on('question:changed', ({ index }) => {
         state.questionIndex = Math.max(0, Math.min(state.questionSnapshots.length - 1, index || 0));
+        if (state.questionStartTimes[state.questionIndex] === undefined) {
+          state.questionStartTimes[state.questionIndex] = Date.now();
+        }
       });
     }
 
@@ -940,6 +946,7 @@ window.AdaptIQ_UI = (() => {
       state.questionSnapshots = Array.from({ length: 30 }, () => ({
         eyeContact: 0, headStability: 0, vocalConfidence: 0, speechClarity: 0, samples: 0, claritySamples: 0
       }));
+      state.questionStartTimes = {};
       state.sparkBuffers = { gds: [], hpd: [], ves: [], ces: [], silr: [] };
       // Reset coach panel
       const coachTip = document.getElementById('coach-tip-text');
@@ -961,6 +968,68 @@ window.AdaptIQ_UI = (() => {
         btn.disabled = false;
       }
     }
+  }
+
+  // ============================================================
+  // DETERMINISTIC REPORT TEMPLATES
+  // ============================================================
+  // Pre-authored feedback bands per metric — biometric commentary is fully
+  // deterministic (no LLM, no latency/token cost) so a report is useful even
+  // without an API key. The LLM (below) is reserved for judging what the
+  // candidate actually SAID, which no biometric threshold can capture.
+  const METRIC_TEMPLATES = {
+    eyeContact: [
+      { min: 80, text: 'Excellent eye contact — you stayed engaged with the camera throughout.' },
+      { min: 60, text: 'Good eye contact overall, with some moments looking away.' },
+      { min: 40, text: "Eye contact dipped several times — try anchoring back to the camera after checking notes." },
+      { min: 0,  text: 'Eye contact was inconsistent — practice holding the camera\'s gaze for longer stretches.' },
+    ],
+    headStability: [
+      { min: 80, text: 'Your head position was steady and composed.' },
+      { min: 60, text: 'Mostly stable head position, with occasional movement.' },
+      { min: 40, text: 'Noticeable head movement — this can read as distraction or nervousness.' },
+      { min: 0,  text: 'Frequent head movement — try to settle into a stable position before answering.' },
+    ],
+    vocalConfidence: [
+      { min: 80, text: 'Your voice carried strong, steady confidence.' },
+      { min: 60, text: 'Generally confident vocal tone, with a few wavering moments.' },
+      { min: 40, text: 'Your vocal tone showed some hesitation or strain.' },
+      { min: 0,  text: 'Vocal confidence was low — pacing and breath control can help here.' },
+    ],
+    speechClarity: [
+      { min: 80, text: 'Speech was clear and well-paced, with minimal filler words.' },
+      { min: 60, text: 'Fairly clear speech with occasional filler words or pacing issues.' },
+      { min: 40, text: 'Clarity was affected by filler words or speaking rate — slow down and pause more.' },
+      { min: 0,  text: 'Speech clarity needs work — reduce filler words and moderate your pace.' },
+    ],
+  };
+
+  function templateFor(metric, value) {
+    const bands = METRIC_TEMPLATES[metric];
+    const v = Math.round(value || 0);
+    return (bands.find(b => v >= b.min) || bands[bands.length - 1]).text;
+  }
+
+  // Deterministic per-question paragraph: the metric furthest from "good"
+  // (below 60) is the most actionable, so lead with that; otherwise lead
+  // with the strongest metric so the note isn't uniformly generic.
+  function deterministicNote(snap) {
+    const metrics = ['eyeContact', 'headStability', 'vocalConfidence', 'speechClarity'];
+    const weak = metrics.filter(m => (snap[m] || 0) < 60).sort((a, b) => (snap[a] || 0) - (snap[b] || 0));
+    const lead = weak.length ? weak[0] : metrics.reduce((best, m) => (snap[m] || 0) > (snap[best] || 0) ? m : best, metrics[0]);
+    return templateFor(lead, snap[lead]);
+  }
+
+  // Attributes transcript segments (Phase 5's structured array) to a question
+  // by time range: from when that question became active until the next one did.
+  function segmentsForQuestion(allSegments, qIndex, totalQuestions) {
+    const start = state.questionStartTimes[qIndex];
+    if (start === undefined) return [];
+    let end = Infinity;
+    for (let j = qIndex + 1; j < totalQuestions; j++) {
+      if (state.questionStartTimes[j] !== undefined) { end = state.questionStartTimes[j]; break; }
+    }
+    return allSegments.filter(s => s.timestamp >= start && s.timestamp < end);
   }
 
   // ============================================================
@@ -1061,21 +1130,33 @@ window.AdaptIQ_UI = (() => {
     doc.line(margin, y, pageW - margin, y);
     y += 16;
 
-    // ── Fetch per-question notes from Claude ──
-    let questionNotes = {};
+    // ── Deterministic biometric commentary (no LLM — always available) ──
+    const deterministicNotes = {};
+    state.questionSnapshots.forEach((s, i) => {
+      if (s.samples > 0) deterministicNotes[i + 1] = deterministicNote(s);
+    });
+
+    // ── Qualitative answer-content feedback from Claude ──
+    // Biometrics above are 100% deterministic; the LLM is reserved for the
+    // one thing a threshold can't judge — what the candidate actually said.
+    let contentNotes = {};
     const apiKey = document.getElementById('api-key-input')?.value?.trim();
-    if (apiKey) {
-      const snapshots = state.questionSnapshots
-        .map((s, i) => s.samples > 0 ? {
-          q: i + 1,
-          eye: Math.round(s.eyeContact),
-          head: Math.round(s.headStability),
-          vocal: Math.round(s.vocalConfidence),
-          clarity: Math.round(s.speechClarity),
-        } : null)
+    const qmForContent = window.QuestionManager;
+    const totalForContent = qmForContent ? qmForContent.total : state.questionSnapshots.length;
+    const allSegments = window.AudioEngine && AudioEngine.getTranscriptSegments
+      ? AudioEngine.getTranscriptSegments()
+      : [];
+
+    if (apiKey && allSegments.length > 0) {
+      const answers = state.questionSnapshots
+        .map((s, i) => {
+          if (s.samples === 0) return null;
+          const answerText = segmentsForQuestion(allSegments, i, totalForContent).map(seg => seg.text).join(' ').trim();
+          return answerText ? { q: i + 1, answer: answerText.slice(0, 800) } : null;
+        })
         .filter(Boolean);
 
-      if (snapshots.length > 0) {
+      if (answers.length > 0) {
         try {
           const resp = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
@@ -1090,7 +1171,7 @@ window.AdaptIQ_UI = (() => {
               max_tokens: 2000,
               messages: [{
                 role: 'user',
-                content: `You are a supportive interview coach writing a session report for a neurodivergent job seeker (profile: ${profile}). For each question below, write 2-3 plain-English sentences about what went well, what to improve, and one concrete tip. Be warm, specific, and never use jargon or acronyms.${(window.ResumeText || '') ? ` The candidate's resume is provided — where it helps, tie tips to their real background (projects, jobs, skills) so advice is concrete. Resume: "${window.ResumeText.slice(0, 3000)}".` : ''} Return a JSON array where each element has "q" (question number) and "note" fields only. Data: ${JSON.stringify(snapshots)}`,
+                content: `You are a supportive interview coach writing a session report for a neurodivergent job seeker (profile: ${profile}). Delivery metrics (eye contact, head stability, vocal confidence, clarity) are scored separately — your job is ONLY to judge the CONTENT of what they said below: did it answer the question, was it specific, was anything missing. Write 1-2 plain-English sentences per question. Be warm and never use jargon or acronyms.${(window.ResumeText || '') ? ` The candidate's resume is provided — where it helps, tie feedback to their real background (projects, jobs, skills) so it's concrete. Resume: "${window.ResumeText.slice(0, 3000)}".` : ''} Return a JSON array where each element has "q" (question number) and "note" fields only. Answers: ${JSON.stringify(answers)}`,
               }],
             }),
           });
@@ -1099,11 +1180,11 @@ window.AdaptIQ_UI = (() => {
             const text = json.content?.[0]?.text || '';
             const match = text.match(/\[[\s\S]*\]/);
             if (match) {
-              JSON.parse(match[0]).forEach(item => { questionNotes[item.q] = item.note; });
+              JSON.parse(match[0]).forEach(item => { contentNotes[item.q] = item.note; });
             }
           }
         } catch (err) {
-          console.warn('[PDF] Claude notes failed:', err);
+          console.warn('[PDF] Claude content notes failed:', err);
         }
       }
     }
@@ -1161,17 +1242,30 @@ window.AdaptIQ_UI = (() => {
         y += 11;
       });
 
-      // AI note
-      const note = questionNotes[i + 1];
-      if (note) {
+      // Deterministic delivery note (always available, no LLM)
+      const deterministic = deterministicNotes[i + 1];
+      if (deterministic) {
         checkBreak(20);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'italic');
         doc.setTextColor(80, 80, 80);
-        const noteLines = doc.splitTextToSize(note, contentW - 8);
+        const noteLines = doc.splitTextToSize(deterministic, contentW - 8);
         checkBreak(noteLines.length * 11 + 4);
         doc.text(noteLines, margin + 8, y);
         y += noteLines.length * 11 + 4;
+      }
+
+      // LLM content note — judges what was actually said, not delivery
+      const content = contentNotes[i + 1];
+      if (content) {
+        checkBreak(20);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(41, 151, 255);
+        const contentLines = doc.splitTextToSize(content, contentW - 8);
+        checkBreak(contentLines.length * 11 + 4);
+        doc.text(contentLines, margin + 8, y);
+        y += contentLines.length * 11 + 4;
       }
 
       // Separator
