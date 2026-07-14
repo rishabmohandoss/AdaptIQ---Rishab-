@@ -3827,21 +3827,120 @@ window.SensorManager = {
 // 1. PROFILE CONFIG
 // =========================================================
 const ProfileConfig = (() => {
-  const SPECIAL_NEEDS_TUTOR = {
-    id: 'special_needs',
-    name: 'Special Needs Tutor',
-    threshold_z: 1.8,
-    ces_alert_level: 65,
-    cooldown_seconds: 20,
-    monitored_signals: ['gds', 'osr', 'hpd', 'et', 'bra'],
-    interventions: {
-      GAZE_ERRATIC:       { action: 'focus_object',   message: "Let's take a breath and look at this shape.",  duration: 3000  },
-      GAZE_LOST:          { action: 'focus_object',   message: 'Look at the screen — find the shape!',          duration: 3000  },
-      ATTENTION_DROP:     { action: 'content_swap',   message: "Let's try something different!"                               },
-      STRESS_DETECTED:    { action: 'break_timer',    message: 'Time for a quick break!',                       duration: 30000 },
-      FOCUS_DRIFT:        { action: 'focus_object',   message: 'Can you find the shape?',                       duration: 3000  },
-      PROLONGED_SILENCE:  { action: 'claude_response',message: "You've been quiet — need help?"                               },
+  // Each weakness contributes signal focus, tighter z-score/value thresholds,
+  // and intervention overrides on top of the base profile.
+  const WEAKNESS_CATALOG = {
+    stuttering: {
+      label: 'Stuttering',
+      monitored_signals: ['silr', 'sr'],
+      signal_z: { sr: 1.3 },
+      val_thresholds: { PROLONGED_SILENCE_SILR: 40 },
+      interventions: {
+        PROLONGED_SILENCE: { action: 'claude_response', message: "Take your time — there's no rush." },
+        SPEECH_PANIC:      { action: 'banner', message: "Pause, breathe, and continue whenever you're ready.", color: '#f59e0b', severity: 'medium' },
+      },
     },
+    eye_contact: {
+      label: 'Losing Eye Contact',
+      monitored_signals: ['gds', 'osr'],
+      signal_z: { gds: 1.3 },
+      val_thresholds: { GAZE_LOST_OSR: 65 },
+      interventions: {
+        GAZE_ERRATIC: { action: 'banner', message: 'Try to keep your eyes on the camera.', color: '#f59e0b', severity: 'medium' },
+        GAZE_LOST:    { action: 'banner', message: "Look at the camera — I'm right here.", color: '#ef4444', severity: 'high' },
+      },
+    },
+    distraction: {
+      label: 'Distraction',
+      monitored_signals: ['gds', 'hpd'],
+      signal_z: { gds: 1.5, hpd: 1.5 },
+      ces_alert_level: 55,
+      interventions: {
+        ATTENTION_DROP: { action: 'content_swap', message: "Let's try something different!" },
+        FOCUS_DRIFT:    { action: 'focus_object',  message: 'Can you find the shape?', duration: 3000 },
+      },
+    },
+    speaking_too_fast: {
+      label: 'Speaking Too Fast',
+      monitored_signals: ['sr', 'pvs'],
+      val_thresholds: { SPEECH_PANIC_SR: 55, OVERCONFIDENT_PACE_SR: 50 },
+      interventions: {
+        SPEECH_PANIC:       { action: 'banner', message: "You're speaking very fast. Pause and collect your thoughts.", color: '#ef4444', severity: 'high' },
+        OVERCONFIDENT_PACE: { action: 'banner', message: 'Great energy! Try varying your pace for emphasis.', color: '#3b82f6', severity: 'low' },
+      },
+    },
+    anxiety: {
+      label: 'Anxiety / Stress',
+      monitored_signals: ['et', 'ves', 'pvs'],
+      signal_z: { et: 1.5, ves: 1.5 },
+      interventions: {
+        STRESS_DETECTED: { action: 'break_timer', message: 'Time for a quick break!', duration: 30000 },
+      },
+    },
+  };
+
+  const BASE_INTERVENTIONS = {
+    GAZE_ERRATIC:       { action: 'banner',         message: 'Maintain steady eye contact with the camera.', color: '#f59e0b', severity: 'medium' },
+    GAZE_LOST:          { action: 'banner',         message: 'Look at the camera.', color: '#ef4444', severity: 'high' },
+    ATTENTION_DROP:     { action: 'content_swap',   message: "Let's try something different!" },
+    STRESS_DETECTED:    { action: 'banner',         message: "Take a breath. Slow down. You've got this.", color: '#f59e0b', severity: 'medium' },
+    FOCUS_DRIFT:        { action: 'claude_response',message: 'Let me rephrase that differently.' },
+    PROLONGED_SILENCE:  { action: 'claude_response',message: "You've been quiet — need help?" },
+    SPEECH_PANIC:       { action: 'banner',         message: "You're speaking quickly. Take a moment.", color: '#f59e0b', severity: 'medium' },
+    OVERCONFIDENT_PACE: { action: 'banner',         message: 'Great energy! Try varying your pace for emphasis.', color: '#3b82f6', severity: 'low' },
+  };
+
+  // threshold_z is the default z-score bound; val_thresholds are the default
+  // raw-value bounds checked directly against a signal (0-100 scale).
+  // PROLONGED_SILENCE_SILR is tighter here (60) than the brain.js test
+  // fixture (80) — matches this app's pre-existing live-demo tuning.
+  const DEFAULT_VAL_THRESHOLDS = {
+    GAZE_LOST_OSR:          80,
+    PROLONGED_SILENCE_SILR: 60,
+    SPEECH_PANIC_SR:        70,
+    OVERCONFIDENT_PACE_SR:  60,
+    OVERCONFIDENT_PACE_PVS: 10,
+  };
+
+  function build(weaknesses = []) {
+    const ids = weaknesses.map(w => (typeof w === 'string' ? w : w?.id)).filter(Boolean);
+
+    const profile = {
+      id: ids.length ? `custom:${ids.join('+')}` : 'custom:general',
+      name: ids.length ? ids.map(id => WEAKNESS_CATALOG[id]?.label || id).join(' + ') : 'General',
+      threshold_z: 2.0,
+      ces_alert_level: 63,
+      cooldown_seconds: 15,
+      monitored_signals: ['gds', 'osr', 'hpd', 'et', 'ves', 'pvs', 'sr', 'silr', 'bra'],
+      signal_z: {},
+      val_thresholds: { ...DEFAULT_VAL_THRESHOLDS },
+      interventions: JSON.parse(JSON.stringify(BASE_INTERVENTIONS)),
+      weaknesses: ids,
+    };
+
+    ids.forEach(id => {
+      const w = WEAKNESS_CATALOG[id];
+      if (!w) return;
+      if (w.ces_alert_level !== undefined) profile.ces_alert_level = w.ces_alert_level;
+      if (w.signal_z) Object.assign(profile.signal_z, w.signal_z);
+      if (w.val_thresholds) Object.assign(profile.val_thresholds, w.val_thresholds);
+      if (w.interventions) {
+        Object.entries(w.interventions).forEach(([flag, iv]) => {
+          profile.interventions[flag] = { ...profile.interventions[flag], ...iv };
+        });
+      }
+    });
+
+    return profile;
+  }
+
+  // Legacy single-select UI profile IDs map to a starter weakness set until
+  // the weakness-picker UI (later phase) replaces the profile-card selector.
+  const LEGACY_WEAKNESSES = {
+    special_needs: ['distraction', 'eye_contact'],
+    adhd:          ['distraction'],
+    anxiety:       ['anxiety'],
+    asd:           ['eye_contact'],
   };
 
   const INTERVIEW_COACH = {
@@ -3852,6 +3951,8 @@ const ProfileConfig = (() => {
     cooldown_seconds: 15,
     monitored_signals: ['gds', 'osr', 'hpd', 'ves', 'pvs', 'sr', 'silr'],
     scored_metrics: true,
+    signal_z: {},
+    val_thresholds: { ...DEFAULT_VAL_THRESHOLDS },
     interventions: {
       GAZE_ERRATIC:        { action: 'banner',         message: 'Maintain steady eye contact with the camera.',              color: '#f59e0b', severity: 'medium' },
       GAZE_LOST:           { action: 'banner',         message: 'Look at the camera — your interviewer is here.',           color: '#ef4444', severity: 'high'   },
@@ -3869,6 +3970,8 @@ const ProfileConfig = (() => {
     ces_alert_level: 63,
     cooldown_seconds: 15,
     monitored_signals: ['et', 'pvs', 'silr', 'sr'],
+    signal_z: {},
+    val_thresholds: { ...DEFAULT_VAL_THRESHOLDS },
     interventions: {
       STRESS_DETECTED:   { action: 'content_swap',   message: "Let's simplify this. Try an easier sentence."     },
       FOCUS_DRIFT:       { action: 'claude_response',message: 'Let me rephrase that differently.'                },
@@ -3877,21 +3980,17 @@ const ProfileConfig = (() => {
     },
   };
 
-  const _byId = {
-    special_needs:    SPECIAL_NEEDS_TUTOR,
-    interview_coach:  INTERVIEW_COACH,
-    language_teacher: LANGUAGE_TEACHER,
-    // UI profile card IDs — map to closest brain profile
-    adhd:    SPECIAL_NEEDS_TUTOR,
-    anxiety: SPECIAL_NEEDS_TUTOR,
-    asd:     SPECIAL_NEEDS_TUTOR,
-  };
-
   return {
-    SPECIAL_NEEDS_TUTOR,
+    WEAKNESS_CATALOG,
     INTERVIEW_COACH,
     LANGUAGE_TEACHER,
-    getById(id) { return _byId[id] || null; },
+    build,
+    getById(id) {
+      if (id === 'interview_coach')  return INTERVIEW_COACH;
+      if (id === 'language_teacher') return LANGUAGE_TEACHER;
+      const weaknesses = LEGACY_WEAKNESSES[id];
+      return weaknesses ? build(weaknesses) : null;
+    },
   };
 })();
 
@@ -3979,18 +4078,26 @@ const AnomalyDetector = (() => {
     return clamp(100 - raw);
   }
 
+  function zFor(name) {
+    return (activeProfile.signal_z && activeProfile.signal_z[name]) || activeProfile.threshold_z;
+  }
+
+  function vt(key, fallback) {
+    const v = activeProfile.val_thresholds && activeProfile.val_thresholds[key];
+    return v !== undefined ? v : fallback;
+  }
+
   function checkCondition(flagType) {
     if (!activeProfile) return false;
-    const z = activeProfile.threshold_z;
     switch (flagType) {
-      case 'GAZE_ERRATIC':       return getZ('gds') > z;
-      case 'GAZE_LOST':          return getVal('osr') > 80;
+      case 'GAZE_ERRATIC':       return getZ('gds') > zFor('gds');
+      case 'GAZE_LOST':          return getVal('osr') > vt('GAZE_LOST_OSR', 80);
       case 'ATTENTION_DROP':     return computeCES(latestSignals) < activeProfile.ces_alert_level;
-      case 'STRESS_DETECTED':    return getZ('et') > z && (getZ('ves') > z || getZ('pvs') > z);
-      case 'FOCUS_DRIFT':        return getZ('gds') > z * 0.8 && getZ('hpd') > z * 0.8;
-      case 'SPEECH_PANIC':       return getVal('sr') > 70 && getZ('ves') > z;
-      case 'PROLONGED_SILENCE':  return getVal('silr') > 60;
-      case 'OVERCONFIDENT_PACE': return getVal('sr') > 60 && getVal('pvs') < 10;
+      case 'STRESS_DETECTED':    return getZ('et') > zFor('et') && (getZ('ves') > zFor('ves') || getZ('pvs') > zFor('pvs'));
+      case 'FOCUS_DRIFT':        return getZ('gds') > zFor('gds') * 0.8 && getZ('hpd') > zFor('hpd') * 0.8;
+      case 'SPEECH_PANIC':       return getVal('sr') > vt('SPEECH_PANIC_SR', 70) && getZ('ves') > zFor('ves');
+      case 'PROLONGED_SILENCE':  return getVal('silr') > vt('PROLONGED_SILENCE_SILR', 60);
+      case 'OVERCONFIDENT_PACE': return getVal('sr') > vt('OVERCONFIDENT_PACE_SR', 60) && getVal('pvs') < vt('OVERCONFIDENT_PACE_PVS', 10);
       default:                   return false;
     }
   }
@@ -4328,10 +4435,17 @@ window.SessionManager = SessionManager;
 // 7. BRAIN MANAGER
 // =========================================================
 window.BrainManager = {
-  init(profileId) {
-    const profile = ProfileConfig.getById(profileId);
-    if (!profile) { console.error('[BrainManager] Unknown profile:', profileId); return; }
-    Bus.emit('profile:selected', { id: profileId, config: profile });
+  // Accepts either a legacy profile id string or an array of weakness ids
+  // (e.g. ['stuttering', 'eye_contact']) built via ProfileConfig.build().
+  init(profileIdOrWeaknesses) {
+    const isWeaknessArray = Array.isArray(profileIdOrWeaknesses);
+    const profile = isWeaknessArray
+      ? ProfileConfig.build(profileIdOrWeaknesses)
+      : ProfileConfig.getById(profileIdOrWeaknesses);
+    if (!profile) { console.error('[BrainManager] Unknown profile:', profileIdOrWeaknesses); return; }
+
+    const id = isWeaknessArray ? profile.id : profileIdOrWeaknesses;
+    Bus.emit('profile:selected', { id, config: profile });
     AnomalyDetector.init(profile);
     InterventionDispatcher.init(profile);
     InterviewScorecard.init(); // always run scorecard — metrics useful for all profiles
