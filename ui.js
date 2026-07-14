@@ -11,6 +11,16 @@ window.AdaptIQ_UI = (() => {
   'use strict';
 
   // ============================================================
+  // THEME
+  // ============================================================
+  // Reads a CSS custom property's live computed value so Canvas 2D drawing
+  // (which can't use var() directly) stays in sync with the active theme.
+  function getThemeVar(name, fallback) {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
+  // ============================================================
   // STATE
   // ============================================================
   const state = {
@@ -353,14 +363,19 @@ window.AdaptIQ_UI = (() => {
     const sy = H / (video.videoHeight || H);
     const bx = x * sx, by = y * sy, bw = width * sx, bh = height * sy;
 
+    // Overlay draws on top of the live camera feed, not the page chrome, so
+    // it uses a dedicated accent var that's intentionally constant across
+    // themes (must stay visible against a face, not the app background).
+    const accentRgb = getThemeVar('--face-overlay-rgb', '0,229,255');
+
     // Face bounding box
-    ctx.strokeStyle = 'rgba(0,229,255,0.7)';
+    ctx.strokeStyle = `rgba(${accentRgb},0.7)`;
     ctx.lineWidth = 1.5;
     ctx.strokeRect(bx, by, bw, bh);
 
     // Corner accents
     const cs = 12;
-    ctx.strokeStyle = '#00e5ff';
+    ctx.strokeStyle = `rgb(${accentRgb})`;
     ctx.lineWidth = 2.5;
     [[bx, by], [bx + bw, by], [bx, by + bh], [bx + bw, by + bh]].forEach(([cx, cy], i) => {
       const dx = i % 2 === 0 ? 1 : -1;
@@ -372,7 +387,7 @@ window.AdaptIQ_UI = (() => {
 
     // Landmarks
     if (data.landmarks && Array.isArray(data.landmarks)) {
-      ctx.fillStyle = 'rgba(0,229,255,0.6)';
+      ctx.fillStyle = `rgba(${accentRgb},0.6)`;
       data.landmarks.forEach(pt => {
         ctx.beginPath();
         ctx.arc((pt.x || pt[0]) * sx, (pt.y || pt[1]) * sy, 1.5, 0, Math.PI * 2);
@@ -384,7 +399,7 @@ window.AdaptIQ_UI = (() => {
     if (data.expressions) {
       const top = Object.entries(data.expressions).sort((a, b) => b[1] - a[1])[0];
       if (top && top[1] > 0.4) {
-        ctx.fillStyle = 'rgba(0,229,255,0.9)';
+        ctx.fillStyle = `rgba(${accentRgb},0.9)`;
         ctx.font = '11px JetBrains Mono, monospace';
         ctx.fillText(top[0].toUpperCase(), bx, by - 6);
       }
@@ -476,7 +491,7 @@ window.AdaptIQ_UI = (() => {
     // Background track
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.strokeStyle = `rgba(${getThemeVar('--overlay-rgb', '255,255,255')},0.06)`;
     ctx.lineWidth = lineW;
     ctx.stroke();
 
