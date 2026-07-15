@@ -70,16 +70,28 @@ window.AdaptIQ_UI = (() => {
   // ============================================================
   // PROFILE SELECTION SCREEN
   // ============================================================
+  // Cards themselves are multi-select toggles (owned by the inline script in
+  // index.html that also drives the cosmetic account-dropdown label — that's
+  // the only place that toggles `.selected`, so this only reads the result).
+  // Navigation happens once via the Continue button, which the inline setup
+  // wizard script also listens on to reset its own step state.
+  const WEAKNESS_LABELS = {
+    stuttering: 'Stuttering', eye_contact: 'Eye Contact', distraction: 'Distraction',
+    speaking_too_fast: 'Speaking Fast', anxiety: 'Anxiety',
+  };
+
   function initProfileScreen() {
-    document.querySelectorAll('.profile-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const id = card.dataset.id;
-        state.profile = id;
-        document.getElementById('topbar-profile-label').textContent = id.toUpperCase();
-        Bus.emit('profile:selected', { id });
-        addEventLog('info', `Profile selected: <strong>${id.toUpperCase()}</strong>`);
-        showScreen('setup');
-      });
+    document.getElementById('weakness-continue-btn')?.addEventListener('click', () => {
+      const weaknesses = [...document.querySelectorAll('#weakness-picker .profile-card.selected')]
+        .map(c => c.dataset.weakness);
+      if (!weaknesses.length) return;
+
+      const label = weaknesses.map(w => WEAKNESS_LABELS[w] || w).join(' + ');
+      state.profile = label;
+      document.getElementById('topbar-profile-label').textContent = label.toUpperCase();
+      Bus.emit('profile:selected', { weaknesses, label });
+      addEventLog('info', `Struggles selected: <strong>${label.toUpperCase()}</strong>`);
+      showScreen('setup');
     });
   }
 

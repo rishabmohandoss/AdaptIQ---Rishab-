@@ -624,6 +624,50 @@
       color: var(--text-primary);
       letter-spacing: -0.02em;
     }
+
+    /* Multi-select checkbox indicator (weakness picker) */
+    .profile-card-check {
+      width: 26px; height: 26px;
+      flex-shrink: 0;
+      margin-right: 18px;
+      border: 1.5px solid rgba(var(--overlay-rgb),0.25);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .profile-card-check::after {
+      content: '✓';
+      font-size: 13px;
+      color: var(--on-accent);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .profile-card.selected {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .profile-card.selected .profile-card-check {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .profile-card.selected .profile-card-check::after { opacity: 1; }
+
+    .weakness-continue-btn {
+      margin-top: 14px;
+      width: 100%;
+      padding: 14px;
+      background: var(--invert-bg);
+      border: 1px solid var(--invert-bg);
+      border-radius: 6px;
+      color: var(--invert-fg);
+      font-family: inherit;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      cursor: pointer;
+      transition: all 180ms;
+    }
+    .weakness-continue-btn:hover:not(:disabled) { background: transparent; color: var(--text-primary); }
+    .weakness-continue-btn:disabled { opacity: 0.35; cursor: not-allowed; }
     .profile-card-tag {
       font-size: 9px;
       font-weight: 600;
@@ -2461,33 +2505,46 @@
           </label>
         </div>
 
-        <!-- RIGHT: mode selection -->
+        <!-- RIGHT: weakness selection (multi-select) -->
         <div class="landing-right">
-          <div class="landing-section-label">Select a Mode</div>
-          <div class="landing-profiles">
-            <div class="profile-card" data-id="adhd">
-              <div class="profile-card-number">1</div>
+          <div class="landing-section-label">Pick Your Struggles</div>
+          <div class="landing-profiles" id="weakness-picker">
+            <div class="profile-card" data-weakness="stuttering">
+              <div class="profile-card-check"></div>
+              <div class="profile-card-tag">Speech
+Pacing</div>
+              <h3>Stuttering</h3>
+            </div>
+            <div class="profile-card" data-weakness="eye_contact">
+              <div class="profile-card-check"></div>
+              <div class="profile-card-tag">Gaze
+Steadiness</div>
+              <h3>Eye Contact</h3>
+            </div>
+            <div class="profile-card" data-weakness="distraction">
+              <div class="profile-card-check"></div>
               <div class="profile-card-tag">Focus
 Engagement</div>
-              <h3>ADHD</h3>
+              <h3>Distraction</h3>
             </div>
-            <div class="profile-card" data-id="anxiety">
-              <div class="profile-card-number">2</div>
+            <div class="profile-card" data-weakness="speaking_too_fast">
+              <div class="profile-card-check"></div>
+              <div class="profile-card-tag">Speech
+Rate</div>
+              <h3>Speaking Fast</h3>
+            </div>
+            <div class="profile-card" data-weakness="anxiety">
+              <div class="profile-card-check"></div>
               <div class="profile-card-tag">Calm
 Clarity</div>
               <h3>Anxiety</h3>
             </div>
-            <div class="profile-card" data-id="asd">
-              <div class="profile-card-number">3</div>
-              <div class="profile-card-tag">Order
-Progress</div>
-              <h3>ASD</h3>
-            </div>
           </div>
+          <button class="weakness-continue-btn" id="weakness-continue-btn" disabled>Continue →</button>
         </div>
       </div>
 
-      <p class="landing-footnote">AdaptIQ tailors all interventions and sensitivity thresholds to the selected profile.</p>
+      <p class="landing-footnote">AdaptIQ tailors all interventions and sensitivity thresholds to the struggles you pick — select at least one to continue.</p>
       <script>
         (() => {
           // Theme toggle — mirrors state across the landing-screen and
@@ -2524,10 +2581,18 @@ Progress</div>
           document.addEventListener('click', (e) => {
             if (!dd.contains(e.target)) dd.classList.remove('open');
           });
-          document.querySelectorAll('.profile-card').forEach(card => {
+          const WEAKNESS_LABELS = {
+            stuttering: 'Stuttering', eye_contact: 'Eye Contact', distraction: 'Distraction',
+            speaking_too_fast: 'Speaking Fast', anxiety: 'Anxiety',
+          };
+          document.querySelectorAll('#weakness-picker .profile-card').forEach(card => {
             card.addEventListener('click', () => {
-              document.getElementById('account-selected-profile').textContent =
-                card.dataset.id.toUpperCase();
+              card.classList.toggle('selected');
+              const selected = [...document.querySelectorAll('#weakness-picker .profile-card.selected')]
+                .map(c => WEAKNESS_LABELS[c.dataset.weakness] || c.dataset.weakness);
+              document.getElementById('account-selected-profile').textContent = selected.length ? selected.join(', ') : 'None';
+              const continueBtn = document.getElementById('weakness-continue-btn');
+              if (continueBtn) continueBtn.disabled = selected.length === 0;
             });
           });
         })();
@@ -2880,15 +2945,19 @@ Progress</div>
     });
     $('setup-prev-step').addEventListener('click', () => showStep(step - 1));
 
-    // Arriving from screen 1: show mode, restart wizard, prefill the job
-    // description from the landing page if one was pasted there
-    document.querySelectorAll('.profile-card').forEach(card => {
-      card.addEventListener('click', () => {
-        $('setup-mode-chip').textContent = `Mode: ${card.dataset.id.toUpperCase()}`;
-        const landingJd = document.getElementById('job-description-input')?.value?.trim();
-        if (landingJd && !$('setup-jd').value.trim()) $('setup-jd').value = landingJd;
-        showStep(1);
-      });
+    // Arriving from screen 1: show the picked struggles, restart wizard,
+    // prefill the job description from the landing page if one was pasted there
+    const WEAKNESS_LABELS_SETUP = {
+      stuttering: 'Stuttering', eye_contact: 'Eye Contact', distraction: 'Distraction',
+      speaking_too_fast: 'Speaking Fast', anxiety: 'Anxiety',
+    };
+    document.getElementById('weakness-continue-btn')?.addEventListener('click', () => {
+      const selected = [...document.querySelectorAll('#weakness-picker .profile-card.selected')]
+        .map(c => WEAKNESS_LABELS_SETUP[c.dataset.weakness] || c.dataset.weakness);
+      $('setup-mode-chip').textContent = `Mode: ${selected.join(', ').toUpperCase()}`;
+      const landingJd = document.getElementById('job-description-input')?.value?.trim();
+      if (landingJd && !$('setup-jd').value.trim()) $('setup-jd').value = landingJd;
+      showStep(1);
     });
 
     $('setup-back-btn').addEventListener('click', () => window.AdaptIQ_UI.showScreen('profile'));
@@ -4985,7 +5054,7 @@ window.BrainManager = {
 
       // profile:selected fires twice: once from UI (no config) then from BrainManager (with config).
       // We only act on the first emission (from UI) to avoid double-init.
-      Bus.on('profile:selected', async ({ id, config }) => {
+      Bus.on('profile:selected', async ({ id, weaknesses, config }) => {
         if (config) return; // BrainManager's re-emission — brain modules handle this one
 
         // Re-read key in case user changed it after boot
@@ -4993,7 +5062,8 @@ window.BrainManager = {
         if (apiKey && window.ClaudeClient) ClaudeClient.setApiKey(apiKey);
 
         // Init brain (registers profile config on brain modules; start() deferred until sensors are live)
-        if (window.BrainManager) BrainManager.init(id);
+        // weaknesses (multi-select picker) takes priority; id is the legacy single-select path.
+        if (window.BrainManager) BrainManager.init(weaknesses && weaknesses.length ? weaknesses : id);
 
         // Reset audio transcript and sensor state for new session
         if (window.AudioEngine) AudioEngine.reset();
