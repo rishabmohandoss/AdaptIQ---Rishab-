@@ -5,6 +5,89 @@ Each entry maps to a git commit and lists what changed, why, and which files wer
 
 ---
 
+## [2026-07-14] 10-Phase Architectural Overhaul
+
+A sequential 10-phase refactor spanning profile configuration, theming, layout,
+signal processing, transcript handling, reporting, on-demand AI help, markdown
+rendering, a technical code sandbox, and resume-driven personalization. Each
+phase was implemented, verified (existing 27-test suite kept passing
+throughout, plus targeted smoke tests per phase), and committed independently.
+
+### Phase 1 — Weakness-Based Profile Factory
+**Commit:** `ec9bc43`
+- Replaced the hardcoded `SPECIAL_NEEDS_TUTOR` profile with `ProfileConfig.build(weaknessesArray)`, a factory composing a `WEAKNESS_CATALOG` (stuttering, eye_contact, distraction, speaking_too_fast, anxiety) onto a base profile.
+- Each weakness tightens specific `signal_z` (z-score) bounds or `val_thresholds` and layers in its own interventions; `AnomalyDetector.checkCondition()` now resolves thresholds per-signal instead of one global z.
+- Legacy profile-card IDs (adhd/anxiety/asd/special_needs) still resolve via a compatibility map — no UI changes required yet.
+- Files: `integration/brain.js`, `index.html` (inline brain-module copy).
+
+### Phase 2 — Dynamic Light/Dark Theming
+**Commit:** `df63c48`
+- Added a full `html[data-theme="light"]` token set alongside the existing dark `:root`.
+- Introduced `--overlay-rgb` (`255,255,255` dark / `0,0,0` light) and routed ~97 `rgba(255,255,255,X)` opacity utilities through it in one mechanical pass.
+- Added `--invert-bg`/`--invert-fg` for filled CTA controls and `--on-accent` for text on saturated accent fills, so both stay legible/high-contrast across themes.
+- Added a theme toggle (synced across landing/in-session topbars, persisted via `localStorage`, applied pre-paint to avoid a flash of the wrong theme).
+- `drawFaceOverlay`/`updateScoreRing` in `ui.js` now read colors from computed CSS variables instead of hardcoded hex.
+- Files: `index.html`, `ui.js`.
+
+### Phase 3 — Resizable Video/Question Layout + Canvas Resize Sync
+**Commit:** `ea47acf`
+- Wrapped `.video-area`/`.question-bar` in a `.dash-main` CSS Grid container with three toggleable states: Split (default), Focus (video shrinks, question grows/scrolls), PiP (video detaches into a floating corner box via `position:fixed`).
+- Added a `ResizeObserver` (`initCanvasResizeSync`) bound to the video panel that immediately recalculates and redraws the face-mesh overlay on any resize, instead of waiting for the next tracking frame.
+- Files: `index.html`, `ui.js`.
+
+### Phase 4 — Kalman-Filtered Gaze + Hann-Windowed Pitch Autocorrelation
+**Commit:** `9273f82`
+- Added a 1D Kalman filter to `GazeEngine`'s screen-space x/y gaze coordinates before they feed the GDS buffers, smoothing MediaPipe iris-landmark micro-jitter.
+- Applied a Hann window to the PCM frame in `autocorrelatePitch` before the autocorrelation sums (not before the loudness gate), stabilizing PVS.
+- Files: `perception/sensors.js`, `index.html` (inline copy), `metrics-math.js`.
+
+### Phase 5 — Structured Live Transcript Buffering
+**Commit:** `1732a77`
+- Replaced `AudioEngine`'s single concatenated `fullTranscript` string with a structured `transcript` array (`[{ timestamp, speaker, text, wpm }]`).
+- Added `getTranscriptSegments()`; `getTranscript()` still returns the flattened string for existing consumers.
+- `SessionManager.endSession()` now packages `transcript_segments` alongside the existing flat transcript.
+- Files: `perception/sensors.js`, `index.html` (inline copy), `integration/brain.js`.
+
+### Phase 6 — Hybrid Final Report Engine
+**Commit:** `2a918d6`
+- Added `METRIC_TEMPLATES`: deterministic, pre-authored feedback banded by score for each biometric metric — no LLM, no token cost, works without an API key.
+- Fixed a real gap: the old LLM call judged "the answer" using only numeric biometric snapshots, never seeing what was said. Added `segmentsForQuestion()` (attributes Phase 5 transcript segments to a question by time range) and rewired the prompt so Claude judges actual answer content while delivery stays deterministic.
+- Files: `ui.js`.
+
+### Phase 7 — Context-Aware On-Demand AI Help Agent
+**Commit:** `e192d7c`
+- Added a Help button; `ui.js` stays decoupled from `brain.js`/`sensors.js` and only emits `Bus.emit('help:requested', ...)`.
+- `InterventionDispatcher` gathers context (last 60s transcript, CES, active profile) and calls `ClaudeClient.generate()`.
+- Fixed a Phase-1-introduced gap: `ClaudeClient`'s system-prompt lookup still keyed off the now-dead `special_needs` id. Added `systemPromptFor(profile)`, building a tailored prompt from `profile.weaknesses`.
+- Files: `index.html`, `integration/brain.js`, `ui.js`.
+
+### Phase 8 — Client-Side Markdown Parser
+**Commit:** `1884f4b`
+- Added `renderMarkdown()` to `ui.js`: escapes HTML first, then converts headers/bullets/bold/italic markdown to proper tags.
+- Applied to the coach panel and session-debrief summary insights, which previously rendered raw LLM markdown as literal characters.
+- Added "do not use markdown formatting" constraints to the relevant Anthropic system prompts.
+- Files: `index.html`, `integration/brain.js`, `ui.js`.
+
+### Phase 9 — HackerRank-Protocol Technical Sandbox (UI + plumbing; backend stubbed)
+**Commit:** `bf317cd`
+- Added a Monaco Editor code-sandbox panel, shown automatically when the active question's category is `'Technical'`.
+- `submitCode()` posts to `/api/sandbox/execute`; since no real backend exists (Firebase Functions doesn't suit arbitrary code execution), it fails gracefully with a clear message. Wired `Bus.emit('sandbox:result', ...)` and a `requestType: 'sandbox_feedback'` LLM branch for when real infra exists.
+- Files: `index.html`, `integration/brain.js`, `ui.js`.
+
+### Phase 10 — Agentic Resume Vectorization
+**Commit:** `f3f1352`
+- Added `resume-worker.js`: a background Web Worker extracting structured entities (languages, frameworks, estimated tenure) from resume text off the main thread.
+- Wired into the resume-upload handler with a synchronous fallback for `file://` contexts where classic Workers can throw.
+- `claudeGenerate()`'s prompt now uses the structured metadata to target technical questions at the candidate's actual stack and calibrate question depth to experience level.
+- Files: `index.html`, `resume-worker.js` (new).
+
+### Final Deployment Check
+- No main-thread blocking operations introduced; Phase 10 moved resume entity extraction off the main thread.
+- Audited all `Bus.emit`/`Bus.on` pairs — every event added across the 10 phases has a matched listener. Found two pre-existing gaps predating this work (`gaze:calibration:next`/`gaze:calibration:progress` emitted with no listener; `claude:ready`/`claude:error` listened for but never emitted) — left as-is, outside this scope.
+- `config.js` (gitignored, never committed) still contains a real Anthropic key loaded client-side — pre-existing, already documented in-file with the production hardening path (route through a server proxy).
+
+---
+
 ## [2026-04-26] Demo Mode for Live Hackathon Demo
 **Commit:** `b74c9e3`
 
