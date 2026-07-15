@@ -39,7 +39,6 @@ window.AdaptIQ_UI = (() => {
     flags: [],
     flagTimers: [],
     intervention: { active: false, timer: null, progressTimer: null },
-    orb: { severity: 'blue', lastUpdate: 0, hideTimer: null },
     eventLog: [],
     charts: {},
     sparkBuffers: { gds: [], hpd: [], ves: [], ces: [], silr: [] },
@@ -519,7 +518,6 @@ window.AdaptIQ_UI = (() => {
           updateVideoStatus(false);
           updateSensorDot('camera', 'error', 'Camera denied');
           updateSystemStatus('error', 'Camera access denied — please allow camera permission');
-          updateOrb('red', 'Camera Denied', 'Allow camera access in browser settings.');
         });
     } else {
       updateSensorDot('camera', 'nominal', 'Camera active');
@@ -530,7 +528,6 @@ window.AdaptIQ_UI = (() => {
     state.faceDetected = detected;
     updateSensorDot('camera', detected ? 'active' : 'warning',
       detected ? 'Camera — face detected' : 'Camera — no face');
-    if (!detected) updateOrb('yellow', 'No Face', 'Move closer or adjust lighting.');
   }
 
   // ============================================================
@@ -879,70 +876,6 @@ window.AdaptIQ_UI = (() => {
   }
 
   // ============================================================
-  // STATUS ORB
-  // ============================================================
-
-  const ORB_SEVERITY = { blue: 0, green: 1, yellow: 2, orange: 3, red: 4 };
-  const ORB_RATE_MS  = 5000;
-
-  function updateOrb(severity, label, desc) {
-    const now = Date.now();
-    // Rate-limit: only update if ≥5s since last update OR incoming severity is higher
-    const cur = state.orb.severity;
-    const isHigher = (ORB_SEVERITY[severity] || 0) > (ORB_SEVERITY[cur] || 0);
-    if (!isHigher && now - state.orb.lastUpdate < ORB_RATE_MS) return;
-
-    state.orb.severity  = severity;
-    state.orb.lastUpdate = now;
-
-    const orb = document.getElementById('status-orb');
-    if (orb) {
-      orb.className = `orb-${severity}`;
-    }
-
-    // Update card contents (but don't auto-show the card)
-    const labelEl = document.getElementById('orb-card-label');
-    const descEl  = document.getElementById('orb-card-desc');
-    if (labelEl) labelEl.textContent = label || severity;
-    if (descEl)  descEl.textContent  = desc  || '';
-
-    // Auto-return to blue (nominal) after 12s if not red
-    if (state.orb.hideTimer) clearTimeout(state.orb.hideTimer);
-    if (severity !== 'red') {
-      state.orb.hideTimer = setTimeout(() => {
-        state.orb.severity = 'blue';
-        const o = document.getElementById('status-orb');
-        if (o) o.className = 'orb-blue';
-      }, 12000);
-    }
-
-    console.log(`[AdaptIQ Orb:${severity.toUpperCase()}]`, label, desc || '');
-  }
-
-  function initOrbClickHandler() {
-    const orb  = document.getElementById('status-orb');
-    const card = document.getElementById('orb-card');
-    const dismissBtn = document.getElementById('orb-card-dismiss');
-
-    if (!orb || !card) return;
-
-    orb.addEventListener('click', (e) => {
-      e.stopPropagation();
-      card.classList.toggle('hidden');
-    });
-
-    dismissBtn && dismissBtn.addEventListener('click', () => {
-      card.classList.add('hidden');
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!card.classList.contains('hidden') && !card.contains(e.target) && e.target !== orb) {
-        card.classList.add('hidden');
-      }
-    });
-  }
-
-  // ============================================================
   // SCORE COLOR HELPER
   // ============================================================
   function scoreColor(val) {
@@ -953,24 +886,8 @@ window.AdaptIQ_UI = (() => {
 
   // Legacy no-ops kept for any external callers
   function hideIntervention() {}
-  function handleFlag(data) {
-    if (!data) return;
-    const { type, severity = 'low', message } = data;
-    const orbSev = severity === 'high' ? 'red' : severity === 'medium' ? 'orange' : 'yellow';
-    updateOrb(orbSev, type || 'Alert', message || '');
-  }
   function handleIntervention(data) {
     if (!data) return;
-    const ACTION_LABELS = {
-      claude_response: 'AI Coach',
-      banner:          'Attention',
-      focus_object:    'Focus Exercise',
-      content_swap:    'Try This',
-      break_timer:     'Take a Break',
-    };
-    const label = ACTION_LABELS[data.action] || 'Intervention';
-    const desc  = (data.chunk !== undefined ? '' : data.message) || '';
-    updateOrb('orange', label, desc);
 
     // Feed the Coach panel
     if (data.action === 'claude_response') {
@@ -1548,7 +1465,6 @@ window.AdaptIQ_UI = (() => {
     Bus.on('signal:update',         updateSignal);
     Bus.on('signal:face',           handleFaceSignal);
     Bus.on('signal:gaze',           handleGazeSignal);
-    Bus.on('flag:fired',            handleFlag);
     Bus.on('intervention:trigger',  handleIntervention);
     Bus.on('scores:update',         handleScoresUpdate);
     Bus.on('calibration:complete',  handleCalibrationComplete);
@@ -1573,7 +1489,6 @@ window.AdaptIQ_UI = (() => {
     });
     Bus.on('claude:error', (err) => {
       updateSensorDot('ai', 'error', err && err.message ? err.message : 'AI error');
-      updateOrb('red', 'AI Error', err && err.message ? err.message : 'Claude API error');
     });
   }
 
@@ -1582,10 +1497,6 @@ window.AdaptIQ_UI = (() => {
   // ============================================================
   function initKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        const card = document.getElementById('orb-card');
-        if (card && !card.classList.contains('hidden')) card.classList.add('hidden');
-      }
       if (e.key === 'g' && state.currentScreen === 'dashboard' && state.mode === 'technical') {
         const dot = document.getElementById('gaze-dot');
         if (dot) dot.style.display = dot.style.display === 'none' ? 'block' : 'none';
@@ -1599,7 +1510,6 @@ window.AdaptIQ_UI = (() => {
   function init() {
     attachBusListeners();
     initProfileScreen();
-    initOrbClickHandler();
     initKeyboardShortcuts();
   }
 
@@ -1609,8 +1519,6 @@ window.AdaptIQ_UI = (() => {
     showScreen,
     startSession,
     addEventLog,
-    updateOrb,
-    handleFlag,
     handleIntervention,
     updateSignal,
     handleFaceSignal,

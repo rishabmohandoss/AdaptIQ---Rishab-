@@ -1506,61 +1506,6 @@
     }
 
     /* =============================================
-       STATUS ORB (replaces all alerts / toasts / modals)
-    ============================================= */
-    #status-orb {
-      position: fixed;
-      top: 21px; left: 7px;
-      width: 14px; height: 14px;
-      border-radius: 50%;
-      z-index: 600;
-      cursor: pointer;
-      background: #2997ff;
-      box-shadow: 0 0 6px rgba(41, 151, 255, 0.45);
-      transition: background-color 1.7s ease, box-shadow 1.7s ease;
-    }
-    #status-orb.orb-blue   { background: #2997ff; box-shadow: 0 0 6px rgba(41, 151, 255, 0.45); }
-    #status-orb.orb-green  { background: #30d158; box-shadow: 0 0 6px rgba(48, 209, 88, 0.45);  }
-    #status-orb.orb-yellow { background: #ffd60a; box-shadow: 0 0 6px rgba(255, 214, 10, 0.45); }
-    #status-orb.orb-orange { background: #ff9f0a; box-shadow: 0 0 6px rgba(255, 159, 10, 0.45); }
-    #status-orb.orb-red    { background: #ff453a; box-shadow: 0 0 6px rgba(255, 69, 58, 0.45);  }
-
-    .orb-card {
-      position: fixed;
-      top: 44px; left: 4px;
-      width: 210px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-bright);
-      border-radius: var(--radius);
-      padding: 12px 14px;
-      z-index: 601;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    }
-    .orb-card.hidden { display: none; }
-    .orb-card-label {
-      font-size: 11px; font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 4px;
-      padding-right: 24px;
-      letter-spacing: 0.04em;
-    }
-    .orb-card-desc {
-      font-size: 11px; line-height: 1.5;
-      color: var(--text-secondary);
-    }
-    .orb-card-dismiss {
-      position: absolute; top: 8px; right: 8px;
-      width: 20px; height: 20px;
-      display: flex; align-items: center; justify-content: center;
-      background: transparent; border: none;
-      color: var(--text-muted); cursor: pointer;
-      font-size: 16px; line-height: 1;
-      border-radius: 4px;
-      transition: color var(--transition);
-    }
-    .orb-card-dismiss:hover { color: var(--text-primary); }
-
-    /* =============================================
        EVENT LOG (right panel)
     ============================================= */
     .event-log {
@@ -3406,14 +3351,6 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
 
   <!-- Gaze dot (technical mode only) -->
   <div id="gaze-dot"></div>
-
-  <!-- Status orb + detail card -->
-  <div id="status-orb" class="orb-blue" title="Nominal"></div>
-  <div id="orb-card" class="orb-card hidden">
-    <button class="orb-card-dismiss" id="orb-card-dismiss">×</button>
-    <div class="orb-card-label" id="orb-card-label">Nominal</div>
-    <div class="orb-card-desc" id="orb-card-desc">All systems running normally.</div>
-  </div>
 
   <!-- ==========================================
        SCRIPTS
