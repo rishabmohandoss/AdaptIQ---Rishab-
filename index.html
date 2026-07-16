@@ -2332,6 +2332,107 @@
     .theme-toggle-btn:hover { background: rgba(var(--overlay-rgb),0.12); color: var(--text-primary); }
     .topbar-right .theme-toggle-btn { margin-right: 10px; }
 
+    /* ── Settings modal ── */
+    .settings-modal {
+      position: fixed; inset: 0; z-index: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .settings-modal.hidden { display: none; }
+    .settings-modal-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.5);
+    }
+    .settings-modal-panel {
+      position: relative;
+      width: min(400px, 90vw);
+      background: var(--bg-card);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    }
+    .settings-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .settings-modal-header h3 {
+      font-size: 15px; font-weight: 600; color: var(--text-primary);
+      letter-spacing: 0.02em;
+    }
+    .settings-modal-close {
+      width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none;
+      color: var(--text-muted); cursor: pointer;
+      font-size: 18px; line-height: 1;
+      border-radius: 6px;
+      transition: color var(--transition);
+    }
+    .settings-modal-close:hover { color: var(--text-primary); }
+
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px;
+      padding: 14px 0;
+      border-top: 1px solid var(--border);
+    }
+    .settings-row:first-of-type { border-top: none; padding-top: 4px; }
+    .settings-row-label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .settings-row-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .settings-row-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+    .settings-theme-toggle {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 6px;
+      height: 32px; padding: 0 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: rgba(var(--overlay-rgb),0.07);
+      color: var(--text-primary);
+      font-family: inherit; font-size: 12px; font-weight: 500;
+      cursor: pointer;
+      transition: all 150ms;
+    }
+    .settings-theme-toggle:hover { background: rgba(var(--overlay-rgb),0.12); }
+
+    .settings-switch {
+      flex-shrink: 0;
+      position: relative;
+      width: 40px; height: 24px;
+      display: inline-block;
+    }
+    .settings-switch input {
+      position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer;
+    }
+    .settings-switch-track {
+      position: absolute; inset: 0;
+      background: rgba(var(--overlay-rgb),0.15);
+      border-radius: 12px;
+      transition: background 150ms;
+    }
+    .settings-switch-track::after {
+      content: '';
+      position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 150ms;
+    }
+    .settings-switch input:checked + .settings-switch-track { background: var(--accent); }
+    .settings-switch input:checked + .settings-switch-track::after { transform: translateX(16px); }
+
+    .settings-status-pill {
+      flex-shrink: 0;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--text-muted);
+      color: var(--bg-void);
+    }
+    .settings-status-pill.connected { background: var(--green); }
+    .settings-status-pill.offline   { background: var(--text-muted); color: var(--text-primary); }
+
     .call-btn {
       width: 42px; height: 42px; border-radius: 50%;
       background: rgba(var(--overlay-rgb),0.07); border: none;
@@ -2376,10 +2477,9 @@
 <body>
 
   <!-- Backend-provided configuration (API key etc.) — never asked of the user.
-       The hidden inputs keep the existing read paths working unchanged. -->
+       The hidden input keeps the existing read path working unchanged. -->
   <script src="config.js"></script>
   <input type="hidden" id="api-key-input">
-  <input type="checkbox" id="demo-mode-toggle" hidden>
   <script>
     document.getElementById('api-key-input').value =
       (window.ADAPTIQ_CONFIG && window.ADAPTIQ_CONFIG.claudeApiKey) || '';
@@ -2402,11 +2502,7 @@
     <div class="landing-content">
       <!-- Top bar -->
       <div class="landing-topbar">
-        <div class="landing-topbar-left">
-          <button class="theme-toggle-btn" id="theme-toggle-btn" type="button" title="Toggle light/dark theme" aria-label="Toggle theme">
-            <span id="theme-toggle-icon">🌙</span>
-          </button>
-        </div>
+        <div class="landing-topbar-left"></div>
         <div class="landing-account" id="account-dropdown">
           <button class="landing-account-btn" id="account-btn" type="button">
             <span class="landing-account-avatar" id="account-avatar-sm">G</span>
@@ -2425,8 +2521,7 @@
             <button class="landing-account-item" type="button">
               Selected Profile <span class="value" id="account-selected-profile">None</span>
             </button>
-            <button class="landing-account-item" type="button">Account Settings</button>
-            <button class="landing-account-item" type="button">Preferences</button>
+            <button class="landing-account-item" type="button" id="open-settings-btn">Settings</button>
             <div class="landing-account-divider"></div>
             <button class="landing-account-item" type="button" id="account-auth-btn">Sign In with Google</button>
           </div>
@@ -2492,29 +2587,44 @@ Clarity</div>
       <p class="landing-footnote">AdaptIQ tailors all interventions and sensitivity thresholds to the struggles you pick — select at least one to continue.</p>
       <script>
         (() => {
-          // Theme toggle — mirrors state across the landing-screen and
-          // in-session buttons and persists the choice across reloads.
+          // Theme toggle — lives in the Settings modal, persists across reloads.
           function applyTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
             try { localStorage.setItem('adaptiq-theme', theme); } catch (e) {}
-            const icon = theme === 'light' ? '☀️' : '🌙';
-            const iconEls = [
-              document.getElementById('theme-toggle-icon'),
-              document.getElementById('theme-toggle-icon-session'),
-            ];
-            iconEls.forEach(el => { if (el) el.textContent = icon; });
+            const icon  = document.getElementById('settings-theme-icon');
+            const label = document.getElementById('settings-theme-label');
+            if (icon)  icon.textContent  = theme === 'light' ? '☀️' : '🌙';
+            if (label) label.textContent = theme === 'light' ? 'Light' : 'Dark';
           }
           const currentTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
           applyTheme(currentTheme);
-          [
-            document.getElementById('theme-toggle-btn'),
-            document.getElementById('theme-toggle-btn-session'),
-          ].forEach(el => {
-            if (!el) return;
-            el.addEventListener('click', () => {
-              const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-              applyTheme(next);
-            });
+          document.getElementById('settings-theme-toggle')?.addEventListener('click', () => {
+            const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            applyTheme(next);
+          });
+
+          // Settings modal — opened from either screen's entry point, closed
+          // via backdrop click, the × button, or Escape.
+          function openSettingsModal() {
+            document.getElementById('settings-modal')?.classList.remove('hidden');
+            const demoToggle = document.getElementById('settings-demo-mode-toggle');
+            if (demoToggle) demoToggle.checked = !!window.DEMO_MODE;
+            const apiKey = document.getElementById('api-key-input')?.value?.trim();
+            const statusEl = document.getElementById('settings-ai-status');
+            if (statusEl) {
+              statusEl.textContent = apiKey ? 'Connected' : 'Not Configured';
+              statusEl.className = `settings-status-pill ${apiKey ? 'connected' : 'offline'}`;
+            }
+          }
+          function closeSettingsModal() {
+            document.getElementById('settings-modal')?.classList.add('hidden');
+          }
+          document.getElementById('open-settings-btn')?.addEventListener('click', openSettingsModal);
+          document.getElementById('open-settings-btn-session')?.addEventListener('click', openSettingsModal);
+          document.getElementById('settings-modal-close')?.addEventListener('click', closeSettingsModal);
+          document.getElementById('settings-modal-backdrop')?.addEventListener('click', closeSettingsModal);
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeSettingsModal();
           });
 
           const dd  = document.getElementById('account-dropdown');
@@ -3077,8 +3187,8 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
       </div>
 
       <div class="topbar-right">
-        <button class="theme-toggle-btn" id="theme-toggle-btn-session" type="button" title="Toggle light/dark theme" aria-label="Toggle theme">
-          <span id="theme-toggle-icon-session">🌙</span>
+        <button class="theme-toggle-btn" id="open-settings-btn-session" type="button" title="Settings" aria-label="Settings">
+          <i class="ti ti-settings"></i>
         </button>
         <div class="topbar-profile-chip-new">
           <span id="topbar-profile-label">ADHD</span>
@@ -3351,6 +3461,47 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
 
   <!-- Gaze dot (technical mode only) -->
   <div id="gaze-dot"></div>
+
+  <!-- Settings modal -->
+  <div id="settings-modal" class="settings-modal hidden">
+    <div class="settings-modal-backdrop" id="settings-modal-backdrop"></div>
+    <div class="settings-modal-panel">
+      <div class="settings-modal-header">
+        <h3>Settings</h3>
+        <button class="settings-modal-close" id="settings-modal-close" aria-label="Close">×</button>
+      </div>
+
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <span class="settings-row-title">Appearance</span>
+          <span class="settings-row-desc">Switch between light and dark theme</span>
+        </div>
+        <button class="settings-theme-toggle" id="settings-theme-toggle" type="button">
+          <span id="settings-theme-icon">🌙</span>
+          <span id="settings-theme-label">Dark</span>
+        </button>
+      </div>
+
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <span class="settings-row-title">Demo Mode</span>
+          <span class="settings-row-desc">Shortens calibration and flag-onset windows for live demos</span>
+        </div>
+        <label class="settings-switch">
+          <input type="checkbox" id="settings-demo-mode-toggle">
+          <span class="settings-switch-track"></span>
+        </label>
+      </div>
+
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <span class="settings-row-title">AI Assistant</span>
+          <span class="settings-row-desc">Live coaching, on-demand help, and question generation</span>
+        </div>
+        <span class="settings-status-pill" id="settings-ai-status">—</span>
+      </div>
+    </div>
+  </div>
 
   <!-- ==========================================
        SCRIPTS
@@ -4972,9 +5123,10 @@ window.BrainManager = {
       if (window.AdaptIQ_UI) window.AdaptIQ_UI.init();
       if (window.QuestionManager) window.QuestionManager.init();
 
-      // Wire Demo Mode toggle — reads checkbox state each time a profile is selected so it can be toggled on profile screen
+      // Wire Demo Mode toggle (Settings modal) — reads checkbox state each
+      // time a profile is selected so it can be toggled from the landing screen
       window.DEMO_MODE = false;
-      document.getElementById('demo-mode-toggle')?.addEventListener('change', (e) => {
+      document.getElementById('settings-demo-mode-toggle')?.addEventListener('change', (e) => {
         window.DEMO_MODE = e.target.checked;
         console.log('[AppInit] Demo mode:', window.DEMO_MODE ? 'ON' : 'OFF');
       });
