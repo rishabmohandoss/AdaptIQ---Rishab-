@@ -12,7 +12,10 @@
       "frontend/**",
       "integration/**",
       "perception/**",
-      "PRD-details/**"
+      "PRD-details/**",
+      "firestore.rules",
+      "firestore.indexes.json",
+      "storage.rules"
     ],
     "rewrites": [
       {
@@ -20,5 +23,12 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }

@@ -2472,6 +2472,266 @@
     }
     .btn-pdf:hover { box-shadow: 0 0 20px var(--accent-glow); }
     .btn-pdf .ti { font-size: 16px; }
+
+    /* ==========================================
+       TRAINING PLATFORM (sidebar shell)
+    =========================================== */
+    .landing-tracker-nav-btn {
+      display: flex; align-items: center; gap: 6px;
+      height: 36px; padding: 0 14px;
+      background: rgba(var(--overlay-rgb),0.06);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-secondary);
+      font-family: var(--font); font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all var(--transition);
+    }
+    .landing-tracker-nav-btn:hover {
+      background: rgba(var(--overlay-rgb),0.1);
+      color: var(--text-primary);
+      border-color: var(--border-bright);
+    }
+
+    #screen-platform { flex-direction: row; background: var(--bg-void); overflow: hidden; }
+
+    .platform-sidebar {
+      width: 232px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      background: var(--bg-surface); border-right: 1px solid var(--border);
+      padding: 20px 12px;
+    }
+    .platform-sidebar-header {
+      padding: 0 10px 18px; margin-bottom: 6px; border-bottom: 1px solid var(--border);
+    }
+    .platform-sidebar-header .wordmark { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+    .platform-sidebar-header .wordmark span { color: var(--cyan); }
+    .platform-sidebar-header .subtitle { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-top: 3px; }
+
+    .platform-nav { display: flex; flex-direction: column; gap: 2px; margin-top: 14px; flex: 1; }
+    .platform-nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: var(--radius-sm);
+      color: var(--text-secondary); font-family: var(--font); font-size: 13px; font-weight: 500;
+      background: transparent; border: none; border-left: 3px solid transparent;
+      cursor: pointer; text-align: left; transition: all var(--transition);
+    }
+    .platform-nav-item .ic { font-size: 15px; width: 18px; text-align: center; }
+    .platform-nav-item:hover { background: rgba(var(--overlay-rgb),0.05); color: var(--text-primary); }
+    .platform-nav-item.active {
+      background: var(--accent-dim); color: var(--accent);
+      border-left-color: var(--accent);
+    }
+
+    .platform-back-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px; margin-top: 10px;
+      background: transparent; border: none; border-top: 1px solid var(--border);
+      color: var(--text-muted); font-family: var(--font); font-size: 12px;
+      cursor: pointer; transition: color var(--transition);
+    }
+    .platform-back-btn:hover { color: var(--text-primary); }
+
+    .platform-main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-width: 0; }
+    .platform-section { display: none; flex-direction: column; height: 100%; }
+    .platform-section.active { display: flex; }
+
+    .platform-placeholder {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 10px; text-align: center; padding: 40px; color: var(--text-muted);
+    }
+    .platform-placeholder .ic { font-size: 34px; margin-bottom: 4px; }
+    .platform-placeholder h3 { font-size: 16px; color: var(--text-primary); font-weight: 600; }
+    .platform-placeholder p { font-size: 13px; max-width: 420px; color: var(--text-secondary); line-height: 1.5; }
+    .platform-placeholder .tag {
+      margin-top: 6px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-bright); color: var(--text-muted);
+    }
+
+    .tracker-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 28px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tracker-topbar-left { display: flex; align-items: center; gap: 14px; }
+    .tracker-title { font-size: 16px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.01em; }
+
+    .tracker-body { flex: 1; overflow-y: auto; padding: 20px 28px 40px; }
+
+    .tracker-stage-timeline { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .tracker-stage-timeline-item {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: var(--text-secondary);
+    }
+    .tracker-stage-timeline-item .dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0;
+    }
+    .tracker-stage-timeline-item .label { color: var(--text-primary); font-weight: 500; }
+    .tracker-stage-timeline-item .date { color: var(--text-muted); margin-left: auto; }
+
+    .tracker-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 18px; flex-wrap: wrap;
+    }
+    .tracker-toolbar-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .tracker-filter-select, .tracker-sort-select {
+      height: 34px; padding: 0 10px;
+      background: var(--bg-panel); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-secondary);
+      font-family: var(--font); font-size: 12px; cursor: pointer;
+    }
+    .tracker-add-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      height: 34px; padding: 0 16px;
+      background: var(--accent); color: var(--on-accent);
+      border: none; border-radius: var(--radius-sm);
+      font-family: var(--font); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: filter var(--transition);
+    }
+    .tracker-add-btn:hover { filter: brightness(1.1); }
+
+    /* Empty state */
+    .tracker-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 10px; padding: 70px 20px; text-align: center; color: var(--text-muted);
+      border: 1px dashed var(--border); border-radius: var(--radius-lg);
+    }
+    .tracker-empty h3 { font-size: 14px; color: var(--text-secondary); font-weight: 600; }
+    .tracker-empty p { font-size: 12px; }
+
+    /* Table */
+    .tracker-table-wrap {
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      overflow: hidden; background: var(--bg-panel);
+    }
+    .tracker-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .tracker-table thead th {
+      text-align: left; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-muted); font-weight: 600;
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
+      background: rgba(var(--overlay-rgb),0.02);
+    }
+    .tracker-table tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+      cursor: pointer;
+    }
+    .tracker-table tbody tr:last-child { border-bottom: none; }
+    .tracker-table tbody tr:hover { background: rgba(var(--overlay-rgb),0.03); }
+    .tracker-table td { padding: 12px 14px; color: var(--text-secondary); vertical-align: middle; }
+    .tracker-table td.tracker-company { color: var(--text-primary); font-weight: 500; }
+    .tracker-table td.tracker-role { color: var(--text-secondary); font-size: 12px; }
+
+    .tracker-status-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 999px;
+      border: 1px solid var(--pill-color, var(--text-muted));
+      color: var(--pill-color, var(--text-secondary));
+      background: var(--pill-color-dim, rgba(var(--overlay-rgb),0.06));
+    }
+    .tracker-status-pill.stage-saved        { --pill-color: var(--text-muted); --pill-color-dim: rgba(var(--overlay-rgb),0.06); }
+    .tracker-status-pill.stage-applied      { --pill-color: var(--accent); --pill-color-dim: var(--accent-dim); }
+    .tracker-status-pill.stage-phone_screen { --pill-color: var(--yellow); --pill-color-dim: var(--amber-dim); }
+    .tracker-status-pill.stage-round_1      { --pill-color: var(--yellow); --pill-color-dim: var(--amber-dim); }
+    .tracker-status-pill.stage-round_2      { --pill-color: var(--purple); --pill-color-dim: rgba(191,90,242,0.15); }
+    .tracker-status-pill.stage-final_round  { --pill-color: var(--purple); --pill-color-dim: rgba(191,90,242,0.15); }
+    .tracker-status-pill.stage-offer        { --pill-color: var(--green); --pill-color-dim: var(--green-dim); }
+    .tracker-status-pill.stage-rejected     { --pill-color: var(--red); --pill-color-dim: var(--red-dim); }
+    .tracker-status-pill.stage-withdrawn    { --pill-color: var(--text-muted); --pill-color-dim: rgba(var(--overlay-rgb),0.06); }
+
+    .tracker-row-badge {
+      font-size: 11px; color: var(--text-muted);
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .tracker-row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+    .tracker-row-actions button {
+      width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: var(--text-muted);
+      cursor: pointer; border-radius: 6px; font-size: 13px;
+      transition: all var(--transition);
+    }
+    .tracker-row-actions button:hover { background: rgba(var(--overlay-rgb),0.08); color: var(--text-primary); }
+    .tracker-row-actions button.danger:hover { color: var(--red); }
+
+    /* Add/Edit modal (extends .settings-modal-panel width) */
+    #tracker-app-modal .settings-modal-panel {
+      width: min(560px, 92vw);
+      max-height: 88vh; overflow-y: auto;
+    }
+    .tracker-form-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px;
+    }
+    .tracker-form-grid .full { grid-column: 1 / -1; }
+    .tracker-field label {
+      display: block; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 6px;
+    }
+    .tracker-field input, .tracker-field select, .tracker-field textarea {
+      width: 100%; background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-primary);
+      font-family: var(--font); font-size: 13px; padding: 8px 10px;
+    }
+    .tracker-field input:focus, .tracker-field select:focus, .tracker-field textarea:focus {
+      outline: none; border-color: var(--accent-border);
+    }
+    .tracker-field textarea { resize: vertical; min-height: 56px; }
+
+    .tracker-resume-zone {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      border: 1px dashed var(--border-bright); border-radius: var(--radius-sm);
+      padding: 10px 12px; cursor: pointer; position: relative;
+      font-size: 12px; color: var(--text-secondary);
+    }
+    .tracker-resume-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .tracker-resume-zone .tag {
+      font-size: 11px; padding: 3px 9px; border-radius: 999px;
+      background: var(--accent-dim); color: var(--accent);
+    }
+
+    .tracker-contacts-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .tracker-contact-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 8px;
+    }
+    .tracker-contact-row input {
+      background: transparent; border: none; color: var(--text-primary);
+      font-family: var(--font); font-size: 12px; padding: 4px;
+    }
+    .tracker-contact-row input:focus { outline: none; }
+    .tracker-contact-remove {
+      background: transparent; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 14px; width: 24px; height: 24px;
+      border-radius: 6px;
+    }
+    .tracker-contact-remove:hover { background: rgba(var(--overlay-rgb),0.08); color: var(--red); }
+    .tracker-add-contact-btn {
+      align-self: flex-start; margin-top: 4px;
+      background: transparent; border: 1px dashed var(--border-bright);
+      color: var(--text-secondary); font-size: 12px; padding: 6px 12px;
+      border-radius: var(--radius-sm); cursor: pointer;
+    }
+    .tracker-add-contact-btn:hover { color: var(--text-primary); border-color: var(--accent-border); }
+
+    .tracker-modal-footer {
+      display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;
+    }
+    .tracker-btn-secondary {
+      height: 36px; padding: 0 16px; background: transparent;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--text-secondary); font-family: var(--font); font-size: 12px;
+      cursor: pointer;
+    }
+    .tracker-btn-secondary:hover { border-color: var(--border-bright); color: var(--text-primary); }
+    .tracker-btn-primary {
+      height: 36px; padding: 0 18px; background: var(--accent);
+      border: none; border-radius: var(--radius-sm);
+      color: var(--on-accent); font-family: var(--font); font-size: 12px; font-weight: 600;
+      cursor: pointer;
+    }
+    .tracker-btn-primary:hover { filter: brightness(1.1); }
   </style>
 </head>
 <body>
@@ -2502,7 +2762,9 @@
     <div class="landing-content">
       <!-- Top bar -->
       <div class="landing-topbar">
-        <div class="landing-topbar-left"></div>
+        <div class="landing-topbar-left">
+          <button class="landing-tracker-nav-btn" id="tracker-nav-btn" type="button">🚀 Training Platform</button>
+        </div>
         <div class="landing-account" id="account-dropdown">
           <button class="landing-account-btn" id="account-btn" type="button">
             <span class="landing-account-avatar" id="account-avatar-sm">G</span>
@@ -2785,6 +3047,7 @@ Clarity</div>
 
           firebase.initializeApp(firebaseConfig);
           const auth = firebase.auth();
+          window.AdaptIQ_Auth = { auth, app: firebase.app() };
 
           function setAvatar(el, user) {
             if (user?.photoURL) {
@@ -2827,8 +3090,212 @@ Clarity</div>
                 ? 'Sign-in cancelled' : 'Sign-in failed — see console';
             }
           });
+
+          document.getElementById('tracker-nav-btn')?.addEventListener('click', () => {
+            window.AdaptIQ_UI.showScreen('platform');
+            window.AdaptIQ_Platform?.init();
+          });
         })();
       </script>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       SCREEN: TRAINING PLATFORM (sidebar shell)
+  =========================================== -->
+  <div id="screen-platform" class="screen">
+    <div class="platform-sidebar">
+      <div class="platform-sidebar-header">
+        <div class="wordmark">Adapt<span>IQ</span></div>
+        <div class="subtitle">Training Platform</div>
+      </div>
+      <nav class="platform-nav">
+        <button class="platform-nav-item active" data-section="applications" type="button"><span class="ic">📋</span> Application Tracker</button>
+        <button class="platform-nav-item" data-section="companies" type="button"><span class="ic">🏢</span> Company Tracker</button>
+        <button class="platform-nav-item" data-section="stories" type="button"><span class="ic">🧩</span> Story Tracker</button>
+        <button class="platform-nav-item" data-section="connections" type="button"><span class="ic">🤝</span> Connection Tracker</button>
+        <button class="platform-nav-item" data-section="pitch" type="button"><span class="ic">🎤</span> Elevator Pitch</button>
+        <button class="platform-nav-item" data-section="skills" type="button"><span class="ic">🛠️</span> Skill Tracker</button>
+      </nav>
+      <button class="platform-back-btn" id="platform-back-btn" type="button">← Back to AdaptIQ</button>
+    </div>
+
+    <div class="platform-main">
+      <!-- APPLICATION TRACKER (functional) -->
+      <div class="platform-section active" id="section-applications">
+        <div class="tracker-topbar">
+          <div class="tracker-topbar-left">
+            <div class="tracker-title">Application Tracker</div>
+          </div>
+        </div>
+
+        <div class="tracker-body">
+          <div class="tracker-toolbar">
+            <div class="tracker-toolbar-filters">
+              <select class="tracker-filter-select" id="tracker-status-filter">
+                <option value="all">All stages</option>
+                <option value="saved">Saved</option>
+                <option value="applied">Applied</option>
+                <option value="phone_screen">Phone Screen</option>
+                <option value="round_1">1st Round</option>
+                <option value="round_2">2nd Round</option>
+                <option value="final_round">Final Round</option>
+                <option value="offer">Offer</option>
+                <option value="rejected">Rejected</option>
+                <option value="withdrawn">Withdrawn</option>
+              </select>
+              <select class="tracker-sort-select" id="tracker-sort-select">
+                <option value="date-desc">Newest first</option>
+                <option value="date-asc">Oldest first</option>
+                <option value="company-asc">Company A→Z</option>
+              </select>
+            </div>
+            <button class="tracker-add-btn" id="tracker-add-btn" type="button">+ Add Application</button>
+          </div>
+
+          <div class="tracker-empty hidden" id="tracker-empty">
+            <h3>No applications yet</h3>
+            <p>Track companies you've applied to, when, who you know there, what resume you sent, and where each one stands in the pipeline.</p>
+            <button class="tracker-btn-primary" id="tracker-empty-add-btn">+ Add your first application</button>
+          </div>
+
+          <div class="tracker-table-wrap hidden" id="tracker-table-wrap">
+            <table class="tracker-table">
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Role</th>
+                  <th>Applied</th>
+                  <th>Stage</th>
+                  <th>Resume</th>
+                  <th>Contacts</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="tracker-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMING SOON PLACEHOLDERS -->
+      <div class="platform-section" id="section-companies">
+        <div class="platform-placeholder">
+          <div class="ic">🏢</div>
+          <h3>Company Tracker</h3>
+          <p>Add a company and its careers page, track roles you're interested in and when they were posted, and get an AI-generated brief — what they specialize in, key skills they look for, anything unusual about their hiring process, recent news, and talking points to stand out in the interview.</p>
+          <span class="tag">Coming soon</span>
+        </div>
+      </div>
+      <div class="platform-section" id="section-stories">
+        <div class="platform-placeholder">
+          <div class="ic">🧩</div>
+          <h3>Story Tracker</h3>
+          <p>A whiteboard for framing your stories with STAR or other methods, with AI analysis on what to optimize and capitalize on. See at a glance which story fits which moment, how each one connects to your resume, and drag-and-drop stories onto specific interview questions during prep — with AI feedback on overused stories and what your choices signal to a hiring manager.</p>
+          <span class="tag">Coming soon</span>
+        </div>
+      </div>
+      <div class="platform-section" id="section-connections">
+        <div class="platform-placeholder">
+          <div class="ic">🤝</div>
+          <h3>Connection Tracker</h3>
+          <p>Track your network — who you know, where, and how they connect to the companies and roles you're pursuing.</p>
+          <span class="tag">Coming soon</span>
+        </div>
+      </div>
+      <div class="platform-section" id="section-pitch">
+        <div class="platform-placeholder">
+          <div class="ic">🎤</div>
+          <h3>Elevator Pitch</h3>
+          <p>Build versions of your elevator pitch at 30 seconds, 1 minute, and 2 minutes — tailored for technical roles or specific companies — with AI feedback on what to keep and what to change.</p>
+          <span class="tag">Coming soon</span>
+        </div>
+      </div>
+      <div class="platform-section" id="section-skills">
+        <div class="platform-placeholder">
+          <div class="ic">🛠️</div>
+          <h3>Skill Tracker</h3>
+          <p>Track the skills you're building or need for target roles, and where you stand on each.</p>
+          <span class="tag">Coming soon</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Application modal -->
+  <div id="tracker-app-modal" class="settings-modal hidden">
+    <div class="settings-modal-backdrop" id="tracker-app-modal-backdrop"></div>
+    <div class="settings-modal-panel">
+      <div class="settings-modal-header">
+        <h3 id="tracker-app-modal-title">Add Application</h3>
+        <button class="settings-modal-close" id="tracker-app-modal-close" aria-label="Close">×</button>
+      </div>
+
+      <form id="tracker-app-form">
+        <div class="tracker-form-grid">
+          <div class="tracker-field">
+            <label for="tracker-field-company">Company</label>
+            <input type="text" id="tracker-field-company" required>
+          </div>
+          <div class="tracker-field">
+            <label for="tracker-field-role">Role</label>
+            <input type="text" id="tracker-field-role">
+          </div>
+          <div class="tracker-field">
+            <label for="tracker-field-date">Applied Date</label>
+            <input type="date" id="tracker-field-date">
+          </div>
+          <div class="tracker-field">
+            <label for="tracker-field-stage">Stage</label>
+            <select id="tracker-field-stage">
+              <option value="saved">Saved</option>
+              <option value="applied" selected>Applied</option>
+              <option value="phone_screen">Phone Screen</option>
+              <option value="round_1">1st Round</option>
+              <option value="round_2">2nd Round</option>
+              <option value="final_round">Final Round</option>
+              <option value="offer">Offer</option>
+              <option value="rejected">Rejected</option>
+              <option value="withdrawn">Withdrawn</option>
+            </select>
+          </div>
+          <div class="tracker-field full">
+            <label for="tracker-field-focus">Company Focus</label>
+            <input type="text" id="tracker-field-focus" placeholder="e.g. fintech, ML infrastructure">
+          </div>
+          <div class="tracker-field full">
+            <label for="tracker-field-url">Job URL</label>
+            <input type="url" id="tracker-field-url" placeholder="https://…">
+          </div>
+          <div class="tracker-field full hidden" id="tracker-stage-timeline-wrap">
+            <label>Stage History</label>
+            <div class="tracker-stage-timeline" id="tracker-stage-timeline"></div>
+          </div>
+          <div class="tracker-field full">
+            <label for="tracker-field-notes">Notes</label>
+            <textarea id="tracker-field-notes"></textarea>
+          </div>
+          <div class="tracker-field full">
+            <label>Resume</label>
+            <label class="tracker-resume-zone" id="tracker-resume-zone">
+              <input type="file" id="tracker-resume-upload" accept=".pdf,.doc,.docx,.txt">
+              <span id="tracker-resume-zone-text">Drop a resume here or browse</span>
+              <span class="tag hidden" id="tracker-resume-tag">Attached</span>
+            </label>
+          </div>
+          <div class="tracker-field full">
+            <label>Contacts</label>
+            <div class="tracker-contacts-list" id="tracker-contacts-list"></div>
+            <button type="button" class="tracker-add-contact-btn" id="tracker-add-contact-btn">+ Add Contact</button>
+          </div>
+        </div>
+
+        <div class="tracker-modal-footer">
+          <button type="button" class="tracker-btn-secondary" id="tracker-delete-btn">Delete</button>
+          <button type="button" class="tracker-btn-secondary" id="tracker-cancel-btn">Cancel</button>
+          <button type="submit" class="tracker-btn-primary">Save</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -5115,6 +5582,8 @@ window.BrainManager = {
   </script>
 
   <script src="ui.js"></script>
+  <script src="platform.js"></script>
+  <script src="tracker.js"></script>
 
   <script>
     // === APP INIT === //
