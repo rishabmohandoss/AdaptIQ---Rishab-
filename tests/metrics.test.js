@@ -2,7 +2,7 @@
 // Runs with plain `node tests/metrics.test.js` — no dependencies.
 // Tests the REAL production code: metrics-math.js is required directly, and
 // the QuestionManager / InterviewScorecard blocks are extracted verbatim from
-// index.html and executed in a sandboxed VM.
+// app.html and executed in a sandboxed VM.
 
 const assert = require('assert');
 const fs = require('fs');
@@ -10,7 +10,7 @@ const path = require('path');
 const vm = require('vm');
 
 const MM = require('../metrics-math.js');
-const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '..', 'app.html'), 'utf8');
 
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -175,7 +175,7 @@ test('grade boundaries', () => {
 });
 
 // ───────────────────────────────────────────────────────────────
-console.log('\n[6] QuestionManager (real code from index.html) — arrow-key desync bug');
+console.log('\n[6] QuestionManager (real code from app.html) — arrow-key desync bug');
 
 function makeBus() {
   const events = [];
@@ -197,7 +197,7 @@ function fakeEl() {
 
 function loadQuestionManager(Bus) {
   const m = html.match(/window\.QuestionManager = \(\(\) => \{[\s\S]*?\}\)\(\);/);
-  assert(m, 'QuestionManager block not found in index.html');
+  assert(m, 'QuestionManager block not found in app.html');
   const docListeners = {};
   const sandbox = {
     window: {}, Bus, console,
@@ -243,11 +243,11 @@ test('setQuestions() resets index and announces it', () => {
 });
 
 // ───────────────────────────────────────────────────────────────
-console.log('\n[7] InterviewScorecard (real code from index.html) — end-to-end score path');
+console.log('\n[7] InterviewScorecard (real code from app.html) — end-to-end score path');
 
 function loadScorecard(Bus, srAvailable) {
   const m = html.match(/const InterviewScorecard = \(\(\) => \{[\s\S]*?\nwindow\.InterviewScorecard = InterviewScorecard;/);
-  assert(m, 'InterviewScorecard block not found in index.html');
+  assert(m, 'InterviewScorecard block not found in app.html');
   const sandbox = {
     Bus, console,
     setInterval: () => 0, clearInterval: () => {},
