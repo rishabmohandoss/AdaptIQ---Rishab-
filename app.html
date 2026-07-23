@@ -3076,6 +3076,15 @@ Clarity</div>
             setAvatar(avatarLg, user);
           });
 
+          // signInWithRedirect (not signInWithPopup): popup-based sign-in needs a
+          // cross-origin frame talking to the authDomain, which Safari's default
+          // third-party-storage blocking silently breaks. Redirect is a full page
+          // navigation instead, and is Firebase's recommended approach for Safari.
+          auth.getRedirectResult().catch((err) => {
+            console.warn('[Auth] Redirect sign-in failed:', err);
+            subEl.textContent = 'Sign-in failed — see console';
+          });
+
           authBtn.addEventListener('click', async () => {
             if (auth.currentUser) {
               await auth.signOut();
@@ -3083,11 +3092,11 @@ Clarity</div>
             }
             try {
               const provider = new firebase.auth.GoogleAuthProvider();
-              await auth.signInWithPopup(provider);
+              await auth.signInWithRedirect(provider);
+              // Page navigates away here — getRedirectResult() above handles the return trip.
             } catch (err) {
               console.warn('[Auth] Sign-in failed:', err);
-              subEl.textContent = err.code === 'auth/popup-closed-by-user'
-                ? 'Sign-in cancelled' : 'Sign-in failed — see console';
+              subEl.textContent = 'Sign-in failed — see console';
             }
           });
 

@@ -646,25 +646,31 @@
     let redirected = false;
     auth.onAuthStateChanged((user) => {
       if (user && !redirected) {
-        // Returning signed-in user — skip the marketing page, go straight to the product.
+        // Returning signed-in user (or just completed the redirect sign-in
+        // round trip) — skip the marketing page, go straight to the product.
         redirected = true;
         window.location.href = 'app.html';
       }
     });
+    auth.getRedirectResult().catch((err) => {
+      console.warn('[Auth] Redirect sign-in failed:', err);
+      if (statusNote) statusNote.textContent = 'Sign-in failed — please try again.';
+    });
 
+    // signInWithRedirect (not signInWithPopup): popup-based sign-in needs a
+    // cross-origin frame talking to the authDomain, which Safari's default
+    // third-party-storage blocking silently breaks. Redirect is a full page
+    // navigation instead, and is Firebase's recommended approach for Safari.
     async function handleSignIn() {
       buttons.forEach(b => b.disabled = true);
-      if (statusNote) statusNote.textContent = 'Opening Google sign-in…';
+      if (statusNote) statusNote.textContent = 'Redirecting to Google sign-in…';
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
-        await auth.signInWithPopup(provider);
-        window.location.href = 'app.html';
+        await auth.signInWithRedirect(provider);
+        // Page navigates away here — the return trip is handled above.
       } catch (err) {
         console.warn('[Auth] Sign-in failed:', err);
-        if (statusNote) {
-          statusNote.textContent = err.code === 'auth/popup-closed-by-user'
-            ? 'Sign-in cancelled.' : 'Sign-in failed — please try again.';
-        }
+        if (statusNote) statusNote.textContent = 'Sign-in failed — please try again.';
         buttons.forEach(b => b.disabled = false);
       }
     }
