@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AdaptIQ — Your career workspace</title><link rel="stylesheet" href="/career.css">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script></head>
+<body><header><a class="wordmark" href="/">Adapt<span>IQ</span></a><span>Career workspace</span><button id="logout" hidden>Sign out</button></header>
+<main><p id="message" role="status" aria-live="polite"></p>
+<section id="signin" hidden><h1>Your next chapter starts here.</h1><p>Sign in to track jobs, prepare tailored interviews, and revisit the sessions you save.</p><div id="google-signin"></div></section>
+<section id="home" hidden>
+  <div class="heading"><div><p class="eyebrow">YOUR NEXT CHAPTER</p><h1 id="welcome">Your career, in progress.</h1></div><button id="add-job" class="primary">+ Add a job</button></div>
+  <div class="stats"><div><strong id="job-count">0</strong><span>Jobs tracked</span></div><div><strong id="interview-count">0</strong><span>Saved interviews</span></div></div>
+  <h2>Your opportunities</h2><label><input id="analyze" type="checkbox" style="display:inline;width:auto"> Include eye tracking and vocal analysis during practice</label><p class="small">Optional analysis uses your camera and microphone. Speech transcription uses your browser’s speech service. These estimates are practice cues, not hiring scores.</p><p id="jobs-empty">Add a company, job description, and your resume to create a tailored practice interview.</p><div id="jobs" class="cards"></div>
+  <h2>Saved practice</h2><p id="sessions-empty">Sessions appear here only when you choose to save them.</p><div id="sessions" class="cards"></div>
+</section>
+<section id="practice" hidden>
+  <div class="heading"><div><p class="eyebrow" id="progress">QUESTION 1</p><h1 id="practice-title">Interview practice</h1></div><button id="leave-practice">Leave practice</button></div>
+  <div class="interview-grid"><div class="camera-panel"><video id="camera" autoplay muted playsinline></video><video id="review-video" playsinline hidden></video><div id="audio-review" hidden><span class="audio-symbol">◖ ◗</span><h2>Listen to your delivery.</h2><audio id="review-audio" controls></audio></div><div class="camera-caption" id="recording-status">Camera preview</div></div>
+  <aside><p class="eyebrow">YOUR QUESTION</p><h2 id="question"></h2><p id="instructions">Take a moment. Start recording when you are ready.</p><p id="timer">0:00 / 5:00</p><div class="actions">
+    <button id="record" class="primary">Start recording</button><button id="stop" class="danger" hidden>Finish answer</button>
+    <button id="watch" hidden>Watch without audio</button><button id="listen" hidden>Listen without video</button><button id="next" class="primary" hidden>Next question</button>
+  </div><p id="analysis-status" class="small"></p><p class="small">Answers stay in this browser until you choose to save the session. Each answer can be up to five minutes.</p></aside></div>
+</section>
+<section id="finish" hidden><p class="eyebrow">PRACTICE COMPLETE</p><h1>Make room for your next attempt.</h1><p>Save your answers to revisit them later, or delete this practice session.</p><div class="actions"><button id="save-session" class="primary">Save session</button><button id="discard-session">Delete unsaved session</button></div><p id="save-progress" role="status"></p></section>
+<section id="saved" hidden><div class="heading"><h1>Review your interview</h1><button id="back-home">Back to home</button></div><div id="saved-answers" class="cards"></div><button id="delete-saved" class="danger">Delete this saved session</button></section>
+</main>
+<dialog id="job-dialog"><form id="job-form"><div class="heading"><h2>Add an opportunity</h2><button type="button" id="close-job" aria-label="Close">×</button></div>
+<label>Company<input name="company" required maxlength="200" autocomplete="organization"></label><label>Job title<input name="role" required maxlength="200"></label>
+<label>Job description<textarea name="description" rows="5" required maxlength="30000" placeholder="Paste the job description"></textarea></label>
+<label>Your resume<textarea name="resumeText" rows="5" required maxlength="30000" placeholder="Paste your resume text to tailor your questions"></textarea></label>
+<label>Resume file (optional)<input name="resume" type="file" accept=".pdf,.docx,.txt"></label><p class="small">PDF, DOCX, or TXT, up to 5 MB. The file is stored privately; pasted text is used to generate questions.</p>
+<button class="primary" type="submit">Save job</button><p id="job-error" role="alert"></p></form></dialog>
+<dialog id="live-dialog"><h2>Practice with Gemini Live</h2><p>Your microphone audio, job description, and resume text will be sent to Google Gemini for a spoken mock interview. AdaptIQ does not save this conversation. Sessions last up to eight minutes.</p><p id="live-status" role="status">Ready when you are.</p><div class="actions"><button id="live-start" class="primary">Start voice practice</button><button id="live-stop">End and close</button></div></dialog>
+<script src="/live.js" defer></script><script src="/career.js" defer></script></body></html>

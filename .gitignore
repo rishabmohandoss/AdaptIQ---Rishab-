@@ -1,2 +1,7 @@
 .firebase/
 config.js
+node_modules/
+.env
+data/
+coverage/
+*.pem

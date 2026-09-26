@@ -1,0 +1,23 @@
+[Unit]
+Description=AdaptIQ career platform
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=adaptiq
+Group=adaptiq
+WorkingDirectory=/opt/adaptiq
+EnvironmentFile=/etc/adaptiq.env
+ExecStart=/usr/bin/node server/start.mjs
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/adaptiq
+
+[Install]
+WantedBy=multi-user.target

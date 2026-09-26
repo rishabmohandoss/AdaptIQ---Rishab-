@@ -1,0 +1,13 @@
+import { createApp } from './app.mjs';
+import { connectDatabase } from './db.mjs';
+import { resumeStorage } from './storage.mjs';
+import { generateQuestions } from './questions.mjs';
+if (!process.env.APP_ORIGIN) throw new Error('APP_ORIGIN is required');
+if (process.env.NODE_ENV === 'production' && !process.env.APP_ORIGIN.startsWith('https://')) throw new Error('Production requires HTTPS');
+const db = connectDatabase();
+await db.query('SELECT 1 FROM users LIMIT 1');
+const { app, cleanup } = createApp({ db, storage: resumeStorage(), generate: generateQuestions });
+await cleanup();
+const timer = setInterval(() => cleanup().catch(e => console.error('Cleanup failed:', e.code || e.name)), 15 * 60000);
+const server = app.listen(Number(process.env.PORT || 3000), '127.0.0.1', () => console.log(`AdaptIQ listening on http://localhost:${process.env.PORT || 3000}`));
+process.on('SIGTERM', () => { clearInterval(timer); server.close(() => db.end()); });

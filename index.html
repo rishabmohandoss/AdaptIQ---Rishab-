@@ -7,9 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<!-- Firebase (compat builds — same pattern used in app.html) -->
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<!-- Authentication is handled by the AWS backend. -->
 
 <style>
   :root{
@@ -259,7 +257,7 @@
     <div class="screen-inner" id="hero-parallax">
       <div class="stat-number reveal visible">1 in 5</div>
       <p class="stat-caption reveal visible">Americans are neurodivergent — and most interview preparation tools weren't built with them in mind.</p>
-      <p class="stat-source reveal visible">AdaptIQ closes that gap with real-time, adaptive AI coaching.</p>
+      <p class="stat-source reveal visible">Prepare at your own pace, with questions tailored to your next opportunity.</p>
       <div class="hero-cta-row reveal visible">
         <button class="btn btn-primary btn-lg" id="hero-signin-btn" type="button">
           <svg class="g-icon" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3c-7.4 0-13.7 4.2-16.9 10.3z"/><path fill="#4CAF50" d="M24 45c5.2 0 10-2 13.5-5.2l-6.2-5.3C29.4 36.4 26.8 37 24 37c-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.4 40.7 16.1 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.5l6.2 5.3C40.9 36 44 30.6 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
@@ -275,9 +273,9 @@
   <!-- PINNED CHAPTER -->
   <section class="pin-story" id="story">
     <div class="pin-inner">
-      <p class="pin-line" data-i="0">It notices hesitation before you do.</p>
-      <p class="pin-line" data-i="1">It adapts in real time — not after the fact.</p>
-      <p class="pin-line" data-i="2">It reports what actually happened.</p>
+      <p class="pin-line" data-i="0">Prepare for the role you want.</p>
+      <p class="pin-line" data-i="1">See your presence. Hear your delivery.</p>
+      <p class="pin-line" data-i="2">Keep the practice worth returning to.</p>
       <div class="pin-progress"><i data-i="0"></i><i data-i="1"></i><i data-i="2"></i></div>
     </div>
   </section>
@@ -301,9 +299,9 @@
         <div class="split-col with reveal">
           <h3>With AdaptIQ</h3>
           <ul>
-            <li>Coaching adjusts to each candidate's cognitive profile</li>
-            <li>Feedback separates answer content from delivery signals</li>
-            <li>Session-level data shows staff exactly where to focus support</li>
+            <li>Questions tailored to your resume and job description</li>
+            <li>Separate silent video and audio-only answer review</li>
+            <li>Saved sessions you can return to on your own schedule</li>
             <li>Candidates can practice independently, at scale, between sessions</li>
           </ul>
         </div>
@@ -315,28 +313,28 @@
   <section class="alt" id="how">
     <div class="wrap">
       <div class="eyebrow reveal">The Product</div>
-      <h2 class="reveal">One continuous loop, running during every practice session.</h2>
-      <p class="lede reveal">Perceive, process, and act — in real time, without adding a single manual step for your staff.</p>
+      <h2 class="reveal">Prepare. Record. Reflect.</h2>
+      <p class="lede reveal">Move through each question at your own pace.</p>
       <div class="rows">
         <div class="row reveal">
           <div class="row-num">01</div>
           <div class="row-body">
-            <h4>Perceive</h4>
-            <p>The browser locally reads facial landmarks, eye gaze, head pose, and voice during the session. Nothing raw ever leaves the candidate's device.</p>
+            <h4>Prepare</h4>
+            <p>Add a company, paste the job description and your resume, and generate questions for that opportunity.</p>
           </div>
         </div>
         <div class="row reveal">
           <div class="row-num">02</div>
           <div class="row-body">
-            <h4>Process</h4>
-            <p>Lightweight behavioral signals — not video — are reasoned over by Claude to identify confusion, disengagement, or overwhelm as it happens.</p>
+            <h4>Record</h4>
+            <p>Your camera takes center stage, with the question beside it. Answer without automatic coaching interruptions.</p>
           </div>
         </div>
         <div class="row reveal">
           <div class="row-num">03</div>
           <div class="row-body">
-            <h4>Act</h4>
-            <p>The candidate gets a real-time, profile-matched intervention. After the session, staff get a structured report — not just a number.</p>
+            <h4>Reflect</h4>
+            <p>Watch your answer silently, then listen without video. Move to the next question, and save the finished session only if you want to keep it.</p>
           </div>
         </div>
       </div>
@@ -347,23 +345,23 @@
   <section>
     <div class="wrap">
       <div class="eyebrow reveal">What's Included</div>
-      <h2 class="reveal">Built for programs, not just individuals.</h2>
+      <h2 class="reveal">Your career preparation, in one place.</h2>
       <div class="grid-4">
         <div class="cell reveal">
-          <h4>Profile-Based Coaching</h4>
-          <p>ADHD, anxiety, and ASD-oriented profiles, each with distinct intervention styles and sensitivity thresholds.</p>
+          <h4>Job Tracking</h4>
+          <p>Keep companies, roles, resumes, and application stages together.</p>
         </div>
         <div class="cell reveal">
-          <h4>Session Reporting</h4>
-          <p>Per-session breakdowns across eye contact, pacing, vocal confidence, and clarity, plus a summary staff can act on.</p>
+          <h4>Answer Review</h4>
+          <p>Separate body language from vocal delivery with two ways to replay each answer.</p>
         </div>
         <div class="cell reveal">
           <h4>Independent Practice</h4>
           <p>Candidates can run sessions on their own time — no scheduling a coach for every rep.</p>
         </div>
         <div class="cell reveal">
-          <h4>Claude-Backed Reasoning</h4>
-          <p>Interventions and answer feedback come from live model reasoning, not a static script.</p>
+          <h4>Optional AI Practice</h4>
+          <p>Practice a spoken mock interview with Gemini Live when you want a conversation.</p>
         </div>
       </div>
     </div>
@@ -435,24 +433,24 @@
   <section id="trust">
     <div class="wrap">
       <div class="eyebrow reveal">Security &amp; Privacy</div>
-      <h2 class="reveal">Built to survive procurement review, not just a demo.</h2>
-      <p class="lede reveal">Video and audio never leave the candidate's device unprocessed. Only abstracted behavioral signals — not footage — are sent to Claude for reasoning.</p>
+      <h2 class="reveal">You choose what to keep.</h2>
+      <p class="lede reveal">Interview recordings stay in your browser until you choose Save session. Discarding practice removes the unsaved answers.</p>
       <div class="trust-list">
         <div class="trust-item reveal">
-          <h4>No raw video storage</h4>
+          <h4>Save by choice</h4>
           <p>Face and voice processing happens client-side. Recordings are never uploaded or retained by default.</p>
         </div>
         <div class="trust-item reveal">
-          <h4>Metadata-only reasoning</h4>
-          <p>Only derived signals (gaze deviation, pace, tone) are sent for AI reasoning — never raw sensor data.</p>
+          <h4>Tailored questions</h4>
+          <p>Your pasted resume and job description are sent to Gemini to generate interview questions.</p>
         </div>
         <div class="trust-item reveal">
-          <h4>Per-organization deployment</h4>
-          <p>Session data and reporting stay scoped to your program — not pooled across unrelated organizations.</p>
+          <h4>Your private workspace</h4>
+          <p>Jobs, resumes, and saved interviews are tied to your signed-in account.</p>
         </div>
         <div class="trust-item reveal">
-          <h4>Built on Anthropic's Claude</h4>
-          <p>Reasoning is powered by Claude via the Anthropic API, under Anthropic's enterprise data-handling terms.</p>
+          <h4>Optional live audio</h4>
+          <p>Starting Gemini Live streams your microphone audio to Google. AdaptIQ does not save those conversations. Optional speech analysis uses your browser’s speech service.</p>
         </div>
       </div>
     </div>
@@ -472,23 +470,23 @@
       <div class="faq-list">
         <details class="faq-item reveal">
           <summary>Does AdaptIQ record or store my video?</summary>
-          <p>No. Face and voice processing happens locally in your browser. Only abstracted behavioral signals — not raw footage — are ever sent anywhere, and only for the purpose of generating real-time coaching.</p>
+          <p>Yes, answers are recorded locally for review. They are uploaded and retained only when you choose Save session. You can delete saved sessions from your dashboard.</p>
         </details>
         <details class="faq-item reveal">
           <summary>What do I need to use it?</summary>
           <p>A modern browser (Chrome recommended), a webcam, and a microphone. No install required — it runs entirely in the browser.</p>
         </details>
         <details class="faq-item reveal">
-          <summary>Is it free?</summary>
-          <p>AdaptIQ started as a hackathon project (1st place, Claude NJIT Hackathon 2026) and individual practice sessions are free to use. Program-level plans below are for organizations that want reporting, admin tools, and support at scale.</p>
+          <summary>Can I return to my answers later?</summary>
+          <p>Choose Save session after practice. Your saved interviews appear on your dashboard, where you can replay or delete them.</p>
         </details>
         <details class="faq-item reveal">
           <summary>What happens when I sign in with Google?</summary>
-          <p>Firebase handles authentication — we never see or store your Google password. Once signed in, you're taken straight into the interview practice product.</p>
+          <p>Google verifies your identity, and our backend creates your signed-in session. You then arrive at your career dashboard. We do not receive your Google password.</p>
         </details>
         <details class="faq-item reveal">
-          <summary>Which cognitive profiles are supported?</summary>
-          <p>ADHD, Anxiety, and ASD-oriented profiles today, each with different intervention styles and sensitivity thresholds — you can also select specific weaknesses to focus on (eye contact, stuttering, distraction, pacing, anxiety).</p>
+          <summary>Can I practice without interruptions?</summary>
+          <p>Yes. Recorded interviews run one question at a time, with optional review between answers. Live AI conversation is a separate mode.</p>
         </details>
       </div>
     </div>
@@ -497,42 +495,42 @@
   <!-- PLANS -->
   <section class="alt" id="plans">
     <div class="wrap">
-      <div class="eyebrow reveal">Plans</div>
-      <h2 class="reveal">Priced for how your program actually runs.</h2>
-      <p class="lede reveal">Every plan includes profile-based coaching, session reporting, and privacy-first processing. Higher tiers add seats, admin controls, and support.</p>
+      <div class="eyebrow reveal">Your Workspace</div>
+      <h2 class="reveal">From opportunity to interview.</h2>
+      <p class="lede reveal">Keep your applications and your preparation together.</p>
       <div class="plans-grid">
         <div class="plan reveal">
-          <div class="plan-name">Pilot</div>
-          <div class="plan-desc">For a single cohort or department testing AdaptIQ before a wider rollout.</div>
+          <div class="plan-name">Track</div>
+          <div class="plan-desc">Build a clear view of your opportunities.</div>
           <ul class="plan-features">
-            <li>Up to 25 candidate seats</li>
-            <li>All cognitive profiles</li>
-            <li>Session reports (CSV export)</li>
-            <li>Email support</li>
+            <li>Companies and job titles</li>
+            <li>Application stages</li>
+            <li>Job descriptions</li>
+            <li>Resume attachments</li>
           </ul>
-          <a class="btn btn-outline plan-cta" href="#contact">Contact Sales</a>
+          <a class="btn btn-outline plan-cta" href="/career.html">Open workspace</a>
         </div>
         <div class="plan featured reveal">
-          <div class="plan-name">Program</div>
-          <div class="plan-desc">For workforce agencies and career centers running this year-round.</div>
+          <div class="plan-name">Practice</div>
+          <div class="plan-desc">Prepare for the role with your own experience.</div>
           <ul class="plan-features">
-            <li>Unlimited candidate seats</li>
-            <li>Admin dashboard across cohorts</li>
-            <li>Aggregate progress reporting</li>
-            <li>Priority support &amp; onboarding</li>
+            <li>Tailored interview questions</li>
+            <li>Camera-first interview layout</li>
+            <li>One answer at a time</li>
+            <li>Optional AI conversation</li>
           </ul>
-          <a class="btn btn-primary plan-cta" href="#contact">Contact Sales</a>
+          <a class="btn btn-primary plan-cta" href="/career.html">Start preparing</a>
         </div>
         <div class="plan reveal">
-          <div class="plan-name">Enterprise</div>
-          <div class="plan-desc">For employers and multi-site organizations with procurement and compliance requirements.</div>
+          <div class="plan-name">Reflect</div>
+          <div class="plan-desc">Choose what to learn from and what to keep.</div>
           <ul class="plan-features">
-            <li>SSO &amp; role-based access</li>
-            <li>Custom data-retention terms</li>
-            <li>Dedicated implementation manager</li>
-            <li>Security review &amp; DPA support</li>
+            <li>Silent video replay</li>
+            <li>Audio-only review</li>
+            <li>Optional eye and voice estimates</li>
+            <li>Save or delete each session</li>
           </ul>
-          <a class="btn btn-outline plan-cta" href="#contact">Contact Sales</a>
+          <a class="btn btn-outline plan-cta" href="/career.html">Visit your dashboard</a>
         </div>
       </div>
     </div>
@@ -621,63 +619,8 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  // ============================================================
-  // FIREBASE GOOGLE SIGN-IN — same project/config as app.html
-  // ============================================================
-  (() => {
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH4je7IuR-cARtb8BKI24h1gchxheiHYg",
-      authDomain: "adaptiq-fa584.firebaseapp.com",
-      projectId: "adaptiq-fa584",
-      storageBucket: "adaptiq-fa584.firebasestorage.app",
-      messagingSenderId: "418982090683",
-      appId: "1:418982090683:web:0b029dcaab9b41ad98969e",
-      measurementId: "G-JX5CPG088L"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const statusNote = document.getElementById('auth-status-note');
-    const buttons = [
-      document.getElementById('nav-signin-btn'),
-      document.getElementById('hero-signin-btn'),
-      document.getElementById('final-signin-btn'),
-    ].filter(Boolean);
-
-    let redirected = false;
-    auth.onAuthStateChanged((user) => {
-      if (user && !redirected) {
-        // Returning signed-in user (or just completed the redirect sign-in
-        // round trip) — skip the marketing page, go straight to the product.
-        redirected = true;
-        window.location.href = 'app.html';
-      }
-    });
-    auth.getRedirectResult().catch((err) => {
-      console.warn('[Auth] Redirect sign-in failed:', err);
-      if (statusNote) statusNote.textContent = 'Sign-in failed — please try again.';
-    });
-
-    // signInWithRedirect (not signInWithPopup): popup-based sign-in needs a
-    // cross-origin frame talking to the authDomain, which Safari's default
-    // third-party-storage blocking silently breaks. Redirect is a full page
-    // navigation instead, and is Firebase's recommended approach for Safari.
-    async function handleSignIn() {
-      buttons.forEach(b => b.disabled = true);
-      if (statusNote) statusNote.textContent = 'Redirecting to Google sign-in…';
-      try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        await auth.signInWithRedirect(provider);
-        // Page navigates away here — the return trip is handled above.
-      } catch (err) {
-        console.warn('[Auth] Sign-in failed:', err);
-        if (statusNote) statusNote.textContent = 'Sign-in failed — please try again.';
-        buttons.forEach(b => b.disabled = false);
-      }
-    }
-
-    buttons.forEach(b => b.addEventListener('click', handleSignIn));
-  })();
 </script>
 
+<script src="/auth.js"></script>
 </body>
 </html>
