@@ -142,7 +142,6 @@ $('start-interview').onclick=()=>{
  if($('setup-fields').disabled||!fields.length)return;
  for(const field of fields){if(!field.value.trim()){field.setCustomValidity('Add a question before starting.');field.reportValidity();field.oninput=()=>field.setCustomValidity('');return}field.setCustomValidity('')}
  questions=fields.map(field=>field.value.trim());questionIndex=0;
- history.pushState({screen:'interview'},'', '/interview');
  $('session-role').textContent=`${$('company').value.trim()} · ${$('role').value.trim()}`;
  $('setup').hidden=true;$('session-heading').hidden=false;$('stages').hidden=false;
  $('question').textContent=questions[0];$('question-count').textContent=`Question 1 of ${questions.length}`;

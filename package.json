@@ -1,6 +1,10 @@
 {
-  "name": "adaptiq-career", "private": true, "version": "0.1.0",
-  "engines": { "node": ">=22" },
+  "name": "adaptiq-career",
+  "private": true,
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=.env server/start.mjs",
     "migrate": "node --env-file-if-exists=.env server/migrate.mjs",
@@ -8,11 +12,22 @@
     "test:review": "node --test tests/jev.test.mjs tests/review-router.test.mjs tests/studio-review.test.mjs design/review-flow.test.mjs design/review-segments.test.mjs",
     "check:jev": "node --env-file-if-exists=.env scripts/check-jev.mjs",
     "build:review": "node scripts/build-review-site.mjs",
+    "preview:public": "node scripts/serve-public.mjs",
+    "test:marketing": "node tests/marketing-browser.cjs",
     "test": "node tests/metrics.test.js && node --test tests/server.test.mjs"
   },
   "dependencies": {
-    "express": "^5.1.0", "pg": "^8.16.0", "google-auth-library": "^10.0.0",
-    "@aws-sdk/client-s3": "^3.900.0", "multer": "^2.0.2", "express-rate-limit": "^8.1.0"
+    "@aws-sdk/client-s3": "^3.900.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "google-auth-library": "^10.0.0",
+    "gsap": "3.15.0",
+    "multer": "^2.0.2",
+    "pg": "^8.16.0"
   },
-  "devDependencies": { "@electric-sql/pglite": "^0.3.14", "supertest": "^7.1.4" }
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "@playwright/test": "1.63.0",
+    "supertest": "^7.1.4"
+  }
 }

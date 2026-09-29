@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": ".",
+    "public": "data/review-public",
     "ignore": [
       "firebase.json",
       ".firebaserc",
@@ -19,7 +19,15 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "source": "/app{,/}",
+        "destination": "/app.html"
+      },
+      {
+        "source": "/interview{,/}",
+        "destination": "/interview.html"
+      },
+      {
+        "source": "/",
         "destination": "/index.html"
       }
     ]
