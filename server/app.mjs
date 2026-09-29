@@ -7,6 +7,7 @@ import { mkdir, rm, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mintLiveToken } from './live.mjs';
+import { reviewRouter } from './review-router.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const sha = token => createHash('sha256').update(token).digest('hex');
@@ -25,6 +26,7 @@ export function createApp({ db, storage, generate, env = process.env, verifyGoog
   const cookieOptions = { httpOnly: true, secure: env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 7 * 86400000 };
   app.disable('x-powered-by');
   app.set('trust proxy', 'loopback');
+  app.use('/api/review', reviewRouter({ env }));
   app.use((req, res, next) => {
     res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'DENY' });
     if (req.path.startsWith('/api/')) {

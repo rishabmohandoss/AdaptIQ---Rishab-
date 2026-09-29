@@ -4,6 +4,10 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env server/start.mjs",
     "migrate": "node --env-file-if-exists=.env server/migrate.mjs",
+    "start:review": "node --env-file-if-exists=.env server/review-start.mjs",
+    "test:review": "node --test tests/jev.test.mjs tests/review-router.test.mjs tests/studio-review.test.mjs design/review-flow.test.mjs design/review-segments.test.mjs",
+    "check:jev": "node --env-file-if-exists=.env scripts/check-jev.mjs",
+    "build:review": "node scripts/build-review-site.mjs",
     "test": "node tests/metrics.test.js && node --test tests/server.test.mjs"
   },
   "dependencies": {

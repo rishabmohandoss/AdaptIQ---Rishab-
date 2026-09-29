@@ -560,7 +560,7 @@ const GazeEngine = (() => {
             avgY: calibSamples.reduce((s, v) => s + v.avgY, 0) / calibSamples.length,
           };
         } else {
-          baseline = { avgX: 0.5, avgY: 0.5 };
+          baseline = null; // Missing calibration must never be reported as measured gaze.
         }
         _applyHeadBaseline();
         Bus.emit('calibration:complete', { type: 'gaze' });
@@ -578,7 +578,7 @@ const GazeEngine = (() => {
   function getLatest() { return latest; }
 
   function dispose() { stop(); if (faceMesh) { faceMesh.close(); faceMesh = null; } }
-  return { init, startCalibration, startMultiPointCalibration, start, stop, pause, dispose, getLatest };
+  return { init, startCalibration, startMultiPointCalibration, start, stop, pause, dispose, getLatest, hasCalibration: () => Boolean(baseline) };
 })();
 
 window.GazeEngine = GazeEngine;

@@ -1,0 +1,22 @@
+[Unit]
+Description=AdaptIQ Jev review API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=adaptiq
+Group=adaptiq
+WorkingDirectory=/opt/adaptiq
+EnvironmentFile=/etc/adaptiq.env
+ExecStart=/usr/bin/node server/review-start.mjs
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,20 +1,24 @@
+import {reviewConfiguration} from './review-client.js';
 const signIn=document.getElementById('studio-signin');
 const note=document.getElementById('auth-note');
 const setup=document.getElementById('setup-fields');
 const logout=document.getElementById('studio-signout');
 const local=['localhost','127.0.0.1','[::1]'].includes(location.hostname);
 function loadScript(src){return new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=reject;document.head.append(script)})}
-if(local){setup.disabled=false;note.textContent='Local preview · no sign-in needed.';document.getElementById('access-label').textContent='INTERACTIVE PREVIEW'}
+let service;
+try{service=await reviewConfiguration()}catch{}
+if(local&&!service?.enabled){setup.disabled=false;note.textContent='Local preview · no sign-in needed. Jev analysis is not configured.';document.getElementById('access-label').textContent='INTERACTIVE PREVIEW'}
 else {
   try {
     await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
     await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js');
-    const response=await fetch('/__/firebase/init.json');
+    const response=await fetch(local?'https://adaptiq-fa584.web.app/__/firebase/init.json':'/__/firebase/init.json');
     if(!response.ok)throw Error('Authentication configuration unavailable');
     const config=await response.json();
     if(config.projectId!=='adaptiq-fa584')throw Error('Unexpected authentication project');
     firebase.initializeApp(config);
     const auth=firebase.auth();
+    window.AdaptIQReviewAuth={getToken:()=>auth.currentUser?.getIdToken()};
     auth.onAuthStateChanged(user=>{
       setup.disabled=!user;signIn.hidden=Boolean(user);logout.hidden=!user;
       note.textContent=user?`Signed in as ${user.displayName||user.email}`:'Sign in to prepare your interview.';
