@@ -6,5 +6,10 @@ let html=await readFile(new URL('design/index.html',root),'utf8');
 for(const name of ['style.css','setup.css','studio.js','session-auth.js'])html=html.replaceAll(`"${name}"`,`"/studio/${name}"`);
 await writeFile(new URL('app.html',output),html);
 for(const file of files)await copyFile(new URL('design/'+file,root),new URL('studio/'+file,output));
+if(process.env.REVIEW_API_ORIGIN){
+  const origin=new URL(process.env.REVIEW_API_ORIGIN);
+  if(origin.protocol!=='https:'||origin.username||origin.password||origin.pathname!=='/'||origin.search||origin.hash)throw Error('REVIEW_API_ORIGIN must be an HTTPS origin');
+  await writeFile(new URL('studio/review-settings.json',output),JSON.stringify({apiOrigin:origin.origin})+'\n');
+}
 for(const file of ['career-sensors.js','metrics-math.js'])await copyFile(new URL(file,root),new URL(file,output));
 console.log('Prepared app.html and 12 explicitly selected public assets in data/review-public. Keep the existing production landing page and auth configuration.');
