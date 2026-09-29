@@ -3076,27 +3076,34 @@ Clarity</div>
             setAvatar(avatarLg, user);
           });
 
-          // signInWithRedirect (not signInWithPopup): popup-based sign-in needs a
-          // cross-origin frame talking to the authDomain, which Safari's default
-          // third-party-storage blocking silently breaks. Redirect is a full page
-          // navigation instead, and is Firebase's recommended approach for Safari.
+          // Process outstanding redirects from the previous release. New sign-ins
+          // use a user-initiated popup to avoid cross-domain redirect storage.
           auth.getRedirectResult().catch((err) => {
             console.warn('[Auth] Redirect sign-in failed:', err);
             subEl.textContent = 'Sign-in failed — see console';
           });
 
           authBtn.addEventListener('click', async () => {
-            if (auth.currentUser) {
-              await auth.signOut();
-              return;
-            }
+            authBtn.disabled = true;
             try {
+              if (auth.currentUser) {
+                await auth.signOut();
+                return;
+              }
               const provider = new firebase.auth.GoogleAuthProvider();
-              await auth.signInWithRedirect(provider);
-              // Page navigates away here — getRedirectResult() above handles the return trip.
+              await auth.signInWithPopup(provider);
             } catch (err) {
               console.warn('[Auth] Sign-in failed:', err);
-              subEl.textContent = 'Sign-in failed — see console';
+              const messages = {
+                'auth/popup-blocked': 'Allow pop-ups for adaptiq.study, then try again.',
+                'auth/popup-closed-by-user': 'Sign-in cancelled. You can try again.',
+                'auth/cancelled-popup-request': 'Sign-in cancelled. Please try again.',
+                'auth/unauthorized-domain': 'Sign-in is not enabled for this website. Please contact support.',
+                'auth/network-request-failed': 'Check your connection and try again.',
+              };
+              subEl.textContent = messages[err.code] || 'Sign-in failed — please try again.';
+            } finally {
+              authBtn.disabled = false;
             }
           });
 

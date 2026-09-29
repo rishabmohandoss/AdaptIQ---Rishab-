@@ -657,20 +657,27 @@
       if (statusNote) statusNote.textContent = 'Sign-in failed — please try again.';
     });
 
-    // signInWithRedirect (not signInWithPopup): popup-based sign-in needs a
-    // cross-origin frame talking to the authDomain, which Safari's default
-    // third-party-storage blocking silently breaks. Redirect is a full page
-    // navigation instead, and is Firebase's recommended approach for Safari.
+    // Popup sign-in avoids redirect's cross-domain storage dependency on our
+    // custom Hosting domain. Invoke directly from the click to preserve activation.
+    // https://firebase.google.com/docs/auth/web/redirect-best-practices#popup
     async function handleSignIn() {
       buttons.forEach(b => b.disabled = true);
-      if (statusNote) statusNote.textContent = 'Redirecting to Google sign-in…';
+      if (statusNote) statusNote.textContent = 'Complete sign-in in the Google window…';
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
-        await auth.signInWithRedirect(provider);
-        // Page navigates away here — the return trip is handled above.
+        await auth.signInWithPopup(provider);
+        // onAuthStateChanged above opens the product after successful sign-in.
       } catch (err) {
         console.warn('[Auth] Sign-in failed:', err);
-        if (statusNote) statusNote.textContent = 'Sign-in failed — please try again.';
+        const messages = {
+          'auth/popup-blocked': 'Allow pop-ups for adaptiq.study, then click Sign in again.',
+          'auth/popup-closed-by-user': 'Sign-in was cancelled. You can try again when you’re ready.',
+          'auth/cancelled-popup-request': 'Sign-in was cancelled. Please try again.',
+          'auth/unauthorized-domain': 'Sign-in is not enabled for this website yet. Please contact support.',
+          'auth/network-request-failed': 'Check your connection and try signing in again.',
+        };
+        if (statusNote) statusNote.textContent = messages[err.code] || 'Sign-in failed — please try again.';
+      } finally {
         buttons.forEach(b => b.disabled = false);
       }
     }
