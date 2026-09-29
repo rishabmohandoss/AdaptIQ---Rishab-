@@ -1,6 +1,7 @@
 import {ReviewFlow} from './review-flow.mjs';
+import {buildPracticeQuestions} from './questions.mjs';
 const $=id=>document.getElementById(id);
-const questions=['Tell me about a time you solved a problem with an unclear path forward.','Describe a time you worked through a disagreement with your team.','Tell me about something you built that made a meaningful difference.'];
+let questions=[];
 let questionIndex=0;
 let stage=0,stream,recorder,recordedURL,duration=90,elapsed=0,playing=false,recordStarted=0,recordTimer,flow=null;
 const video=$('video'),shell=$('video-shell'),originalHome=shell.parentElement;
@@ -58,7 +59,7 @@ function showStage(next){halt();status();stage=next;flow=moments[stage]?new Revi
  if(!recordedURL){$('empty').innerHTML='<span class="camera-icon" aria-hidden="true">▶</span><h2>Example review</h2><p>No recording loaded. Press play to try the guided pauses.</p>'}
  $('audio-surface').hidden=stage!==2;$('scorecard').hidden=stage!==3;
  const copy={1:['01 / PRESENCE','Notice how you show up.','Set the words aside. Watch your expression, posture, and connection.'],2:['02 / VOICE','Hear the story you’re telling.','No picture this time. Just your voice, and the moments that matter.'],3:['03 / REFLECTION','Bring it all together.','Watch your full answer, then reflect on what to try next.']}[stage];
- $('review-label').textContent=copy[0];$('review-title').textContent=copy[1];$('review-description').textContent=copy[2];$('seek').max=duration;$('continue').textContent=stage===1?'Continue to voice →':stage===2?'See full reflection →':questionIndex===2?'Finish practice →':'Next question →';
+ $('review-label').textContent=copy[0];$('review-title').textContent=copy[1];$('review-description').textContent=copy[2];$('seek').max=duration;$('continue').textContent=stage===1?'Continue to voice →':stage===2?'See full reflection →':questionIndex===questions.length-1?'Finish practice →':'Next question →';
  renderHighlights();if(stage===3)renderScore();updateTime();
 }
 const initialEmpty=$('empty').innerHTML;
@@ -69,12 +70,31 @@ $('record').onclick=()=>{if(recorder?.state==='recording'){$('record').disabled=
 $('demo').onclick=()=>{duration=90;showStage(1)};
 $('play').onclick=()=>{if(playing)halt();else{if((recordedURL?video.currentTime:elapsed)>=duration){elapsed=0;if(recordedURL)video.currentTime=0;if(flow){flow=new ReviewFlow(moments[stage],duration);renderHighlights()}}play()}};
 $('seek').oninput=()=>{if(flow)return;if(recordedURL)video.currentTime=Number($('seek').value);else elapsed=Number($('seek').value);updateTime()};
-function advance(){if(stage<3){showStage(stage+1);return}releaseRecording();if(questionIndex===2){halt();$('review').hidden=true;$('complete').hidden=false;status();return}questionIndex++;$('question').textContent=questions[questionIndex];$('question-count').textContent=`Question ${questionIndex+1} of 3`;$('empty').innerHTML=initialEmpty;bindCamera();showStage(0)}
+function advance(){if(stage<3){showStage(stage+1);return}halt();releaseRecording();if(questionIndex===questions.length-1){$('review').hidden=true;$('complete').hidden=false;$('stages').hidden=true;$('session-heading').hidden=true;status();return}questionIndex++;$('question').textContent=questions[questionIndex];$('question-count').textContent=`Question ${questionIndex+1} of ${questions.length}`;$('empty').innerHTML=initialEmpty;bindCamera();showStage(0)}
 $('continue').onclick=advance;$('skip').onclick=advance;
-$('restart').onclick=()=>{releaseCamera();releaseRecording();questionIndex=0;$('question').textContent=questions[0];$('question-count').textContent='Question 1 of 3';$('empty').innerHTML=initialEmpty;bindCamera();showStage(0)};
+$('restart').onclick=()=>{halt();flow=null;releaseCamera();releaseRecording();questionIndex=0;questions=[];$('setup-form').reset();$('question-preview').hidden=true;$('question-list').replaceChildren();$('complete').hidden=true;$('setup').hidden=false;$('empty').innerHTML=initialEmpty;bindCamera();$('company').focus();window.scrollTo({top:0})};
 video.ontimeupdate=updateTime;video.onended=()=>{updateTime();halt()};
 setInterval(()=>{if(playing&&!recordedURL){elapsed=Math.min(duration,elapsed+.1);updateTime();if(elapsed>=duration)halt()}},100);
 for(let i=0;i<65;i++){const bar=document.createElement('i');bar.style.height=`${12+Math.abs(Math.sin(i*1.7)*Math.cos(i*.3))*80}px`;$('audio-surface').querySelector('.wave').append(bar)}
 window.addEventListener('pagehide',()=>{clearInterval(recordTimer);releaseCamera();if(recordedURL)URL.revokeObjectURL(recordedURL)});
-$('question').textContent=questions[0];
+$('setup-form').onsubmit=event=>{
+ event.preventDefault();$('setup-error').textContent='';
+ if($('setup-fields').disabled||!$('setup-form').reportValidity())return;
+ const inputs={company:$('company').value.trim(),role:$('role').value.trim(),description:$('description').value.trim(),resumeText:$('resume-text').value.trim()};
+ if(!inputs.company||!inputs.role||inputs.description.length<30||inputs.resumeText.length<20){$('setup-error').textContent='Add a company, role, job description, and resume text to prepare your questions.';return}
+ questions=buildPracticeQuestions(inputs);$('question-list').replaceChildren();
+ questions.forEach((question,index)=>{const label=document.createElement('label');label.textContent=`Question ${index+1}`;const input=document.createElement('textarea');input.value=question;input.rows=2;input.required=true;input.maxLength=1000;input.dataset.questionIndex=index;label.append(input);$('question-list').append(label)});
+ $('question-preview').hidden=false;$('generate').textContent='Regenerate questions →';$('question-list').querySelector('textarea').focus();
+ $('question-preview').scrollIntoView({block:'start',behavior:'smooth'});
+};
+$('start-interview').onclick=()=>{
+ const fields=[...$('question-list').querySelectorAll('textarea')];
+ if($('setup-fields').disabled||!fields.length)return;
+ for(const field of fields){if(!field.value.trim()){field.setCustomValidity('Add a question before starting.');field.reportValidity();field.oninput=()=>field.setCustomValidity('');return}field.setCustomValidity('')}
+ questions=fields.map(field=>field.value.trim());questionIndex=0;
+ $('session-role').textContent=`${$('company').value.trim()} · ${$('role').value.trim()}`;
+ $('setup').hidden=true;$('session-heading').hidden=false;$('stages').hidden=false;
+ $('question').textContent=questions[0];$('question-count').textContent=`Question 1 of ${questions.length}`;
+ $('empty').innerHTML=initialEmpty;bindCamera();showStage(0);window.scrollTo({top:0});$('camera').focus();
+};
 ['Answer','Presence','Voice','Reflection'].forEach((name,i)=>{const button=document.createElement('button');button.innerHTML=`<b>${i+1}</b>${name}`;button.className=i===0?'active':'';button.disabled=true;$('stages').append(button)});
