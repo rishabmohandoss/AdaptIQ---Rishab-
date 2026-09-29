@@ -31,7 +31,7 @@ else {
     };
     logout.onclick=async()=>{
       if(!confirm('Sign out? Any unsaved practice in this tab will be deleted.'))return;
-      try{await auth.signOut();location.replace('/')}
+      try{await auth.signOut();location.replace('/app')}
       catch{note.textContent='Could not sign out. Please try again.'}
     };
   } catch {note.textContent='Sign-in could not load. Reload this page to try again.';}

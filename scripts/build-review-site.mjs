@@ -4,7 +4,9 @@ await mkdir(new URL('studio/',output),{recursive:true});
 const files=['style.css','setup.css','studio.js','session-auth.js','questions.mjs','review-flow.mjs','review-capture.js','review-segments.mjs','review-client.js','review-settings.json'];
 let html=await readFile(new URL('design/index.html',root),'utf8');
 for(const name of ['style.css','setup.css','studio.js','session-auth.js'])html=html.replaceAll(`"${name}"`,`"/studio/${name}"`);
-await writeFile(new URL('app.html',output),html);
+html=html.replace('href="/"','href="/app"');
+await writeFile(new URL('interview.html',output),html);
+await writeFile(new URL('app.html',output),await readFile(new URL('index.html',root),'utf8'));
 for(const file of files)await copyFile(new URL('design/'+file,root),new URL('studio/'+file,output));
 if(process.env.REVIEW_API_ORIGIN){
   const origin=new URL(process.env.REVIEW_API_ORIGIN);
@@ -12,4 +14,4 @@ if(process.env.REVIEW_API_ORIGIN){
   await writeFile(new URL('studio/review-settings.json',output),JSON.stringify({apiOrigin:origin.origin})+'\n');
 }
 for(const file of ['career-sensors.js','metrics-math.js'])await copyFile(new URL(file,root),new URL(file,output));
-console.log('Prepared app.html and 12 explicitly selected public assets in data/review-public. Keep the existing production landing page and auth configuration.');
+console.log('Prepared app.html (home), interview.html (studio), and 12 explicitly selected public assets in data/review-public.');
