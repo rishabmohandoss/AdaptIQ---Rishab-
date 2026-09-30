@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AdaptIQ · Interview studio</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="setup.css"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f5f5f1"><title>AdaptIQ · Interview studio</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="setup.css"></head>
 <body>
-<header><a class="brand" href="/app" aria-label="AdaptIQ home">adapt<span>iq</span><sup> / studio</sup></a><span class="prototype" id="access-label">EARLY ACCESS</span><button id="studio-signout" class="text-button" hidden>Sign out</button></header>
-<main>
+<a class="skip-link" href="#main">Skip to interview</a><header><a class="brand" href="/app" aria-label="AdaptIQ home">adaptiq<span>.</span></a><span class="studio-label">Interview studio</span><div class="header-actions"><span class="prototype" id="access-label">EARLY ACCESS</span><a class="home-link" href="/app">Back to home ↗</a><button id="studio-signout" class="text-button" hidden>Sign out</button></div></header>
+<main id="main">
  <section id="setup">
-  <div class="setup-heading"><p class="eyebrow">YOUR NEXT OPPORTUNITY</p><h1>Make this practice about your next role.</h1><p class="muted">Add the job, prepare your questions, and take a moment to practice.</p></div>
-  <p id="auth-note" role="status">Checking sign-in…</p><button id="studio-signin" class="primary" hidden>Sign in with Google</button>
+  <div class="setup-heading"><p class="eyebrow">01 / PREPARE YOUR PRACTICE</p><h1>Your next role.<br><span>Start with a little practice.</span></h1><p class="muted">Bring the opportunity and your experience. Make the next conversation feel more familiar.</p></div>
+  <div class="auth-bar"><p id="auth-note" role="status">Checking sign-in…</p><button id="studio-signin" class="primary" hidden>Sign in with Google</button></div>
   <div class="setup-grid"><form id="setup-form"><fieldset id="setup-fields" disabled>
    <div class="field-row"><label>Company<input id="company" required maxlength="200" placeholder="Company name" autocomplete="organization"></label><label>Role<input id="role" required maxlength="200" placeholder="Job title"></label></div>
    <label>Job description<textarea id="description" required minlength="30" maxlength="30000" rows="7" placeholder="Paste the responsibilities, requirements, and anything else you want to prepare for."></textarea></label>
