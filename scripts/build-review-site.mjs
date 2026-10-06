@@ -2,7 +2,7 @@ import {mkdir,readFile,copyFile,writeFile,cp} from 'node:fs/promises';
 import './build-marketing.mjs';
 const root=new URL('../',import.meta.url),output=new URL('data/review-public/',root);
 await mkdir(new URL('studio/',output),{recursive:true});
-const files=['style.css','setup.css','studio.js','session-auth.js','questions.mjs','review-flow.mjs','review-capture.js','review-segments.mjs','review-client.js','review-settings.json'];
+const files=['style.css','setup.css','studio.js','session-auth.js','questions.mjs','review-flow.mjs','review-capture.js','review-segments.mjs','review-client.js','review-settings.json','feedback-catalog.mjs'];
 let html=await readFile(new URL('design/index.html',root),'utf8');
 for(const name of ['style.css','setup.css','studio.js','session-auth.js'])html=html.replaceAll(`"${name}"`,`"/studio/${name}"`);
 html=html.replace('href="/"','href="/app"');

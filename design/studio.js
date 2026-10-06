@@ -2,6 +2,7 @@ import {ReviewFlow} from './review-flow.mjs';
 import {buildPracticeQuestions} from './questions.mjs';
 import {prepareCapture,startCapture,finishCapture,disposeCapture} from './review-capture.js';
 import {submitReview} from './review-client.js';
+import {feedbackCatalog,catalogHighlight,withPracticeFeedback} from './feedback-catalog.mjs';
 const $=id=>document.getElementById(id);
 let questions=[];
 let questionIndex=0;
@@ -19,7 +20,7 @@ function halt(){playing=false;video.pause();$('play').textContent='Play answer';
 function releaseCamera(){disposeCapture();captureReady=false;stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null}
 function releaseRecording(){if(recordedURL)URL.revokeObjectURL(recordedURL);recordedURL=null;video.removeAttribute('src');video.load()}
 function updateTime(){
- const current=recordedURL?video.currentTime:elapsed;
+ const current=recordedURL?(video.ended?duration:video.currentTime):elapsed;
  $('seek').value=current;$('position').textContent=`${time(current)} / ${time(duration)}`;
  if(flow && flow.pending===null && (playing || video.ended)){
   const index=flow.tick(current);
@@ -38,7 +39,7 @@ function showFeedback(index){
  $('highlights').hidden=false;
  const improve=m[2]==='Try this next time';
  $('highlights').innerHTML=`<article class="feedback ${improve?'improve':''}" aria-labelledby="feedback-title"><div class="feedback-icon" aria-hidden="true">${improve?'↗':'✓'}</div><div class="feedback-copy"><p class="eyebrow">PAUSED · MOMENT ${index+1} OF ${moments[stage].length} · ${time(m[4]*duration)}</p><span class="kind"></span><h3 id="feedback-title"></h3><p class="feedback-message"></p></div><button id="resume-highlight" class="primary">Continue →</button></article>`;
- $('highlights').querySelector('.kind').textContent=m[2];$('feedback-title').textContent=m[0];$('highlights').querySelector('.feedback-message').textContent=m[1];
+ $('highlights').querySelector('.kind').textContent=m[5]==='rule'?`Practice guidance · ${m[2]}`:m[2];$('feedback-title').textContent=m[0];$('highlights').querySelector('.feedback-message').textContent=m[1];
  $('play').disabled=true;$('seek').disabled=true;
  $('guide-message').textContent='Take a moment to reflect. Continue when you’re ready.';
  $('resume-highlight').onclick=()=>{
@@ -68,12 +69,15 @@ function renderScore(){
  for(const item of scores){const row=document.createElement('div'),text=document.createElement('div'),bar=document.createElement('progress');row.className='category';text.textContent=`${item.label} · ${item.score.toFixed(1)} / 10`;bar.max=10;bar.value=item.score;bar.setAttribute('aria-label',item.label);row.append(text,bar);list.append(row)}
  if(!scores.length)list.textContent='Review your recording at your own pace. No score was inferred from missing evidence.';
  box.append(list);
+ if(!demoMode){const guidance=document.createElement('div');guidance.className='practice-guidance';for(const h of withPracticeFeedback(reviewResult?.highlights||[],duration).filter(h=>h.source==='rule')){const title=document.createElement('strong'),message=document.createElement('p');title.textContent=h.title;message.textContent=h.message;guidance.append(title,message)}if(guidance.children.length)box.append(guidance)}
 }
 function applyReview(result){
- reviewResult=result;moments={1:[],2:[]};
- for(const h of result?.highlights||[]){
+ const observations=(result?.highlights||[]).filter(h=>Object.hasOwn(feedbackCatalog,h.label)&&!['practice_effort','answer_short','answer_long'].includes(h.label)&&Number.isFinite(h.start)&&Number.isFinite(h.end)&&h.start>=0&&h.start<h.end&&h.end<=duration).map(h=>({...h,...catalogHighlight(h.label,h.start,h.end,'jev')}));
+ const highlights=withPracticeFeedback(observations,duration);
+ reviewResult=result?{...result,highlights}:null;moments={1:[],2:[]};
+ for(const h of highlights){
   if(!['video','audio'].includes(h.mode)||!Number.isFinite(h.start)||!Number.isFinite(h.end)||h.start<0||h.end>duration||h.start>=h.end)continue;
-  moments[h.mode==='video'?1:2].push([h.title,h.message,h.type==='strength'?'Keep doing this':'Try this next time',h.start/duration,h.end/duration]);
+  moments[h.mode==='video'?1:2].push([h.title,h.message,h.type==='strength'?'Keep doing this':'Try this next time',h.start/duration,h.end/duration,h.source]);
  }
  for(const group of Object.values(moments))group.sort((a,b)=>a[4]-b[4]);
 }
@@ -87,7 +91,7 @@ async function analyzeAnswer(){
 $('skip-analysis').onclick=()=>{analysisSequence++;analysisController?.abort();$('analysis-wait').hidden=true;applyReview(null);showStage(1);$('retry-analysis').hidden=false;status('Analysis skipped. Your recording is ready to review.')};
 $('retry-analysis').onclick=()=>{if(reviewInput)analyzeAnswer()};
 function showStage(next){halt();status();stage=next;flow=moments[stage]?new ReviewFlow(moments[stage],duration):null;elapsed=0;if(recordedURL)video.currentTime=0;
- $('example-note').textContent=demoMode?'Example feedback and scores · Not an analysis of a recording.':reviewResult?.model?`Jev coaching · ${reviewResult.model} · Practice estimates; speech timestamps are approximate.`:'Personal playback · No generated coaching or scores.';
+ $('example-note').textContent=demoMode?'Example feedback and scores · Not an analysis of a recording.':reviewResult?.model?'Jev selects saved coaching phrases from measured evidence. Moment timing is approximate. Duration tips use fixed rules.':'Saved practice guidance only · Jev observations and scores are unavailable.';
  document.querySelectorAll('#stages button').forEach((button,i)=>{button.classList.toggle('active',i===stage);button.setAttribute('aria-current',i===stage?'step':'false')});
  $('workspace').hidden=stage!==0;$('review').hidden=stage===0;$('complete').hidden=true;
  if(stage===0){originalHome.prepend(shell);shell.hidden=false;video.muted=true;$('empty').hidden=false;$('media-badge').hidden=true;$('record').disabled=true;$('record').textContent='Start answer';$('camera').disabled=false;$('clock').textContent='00:00';$('heading').textContent='A little practice. A little more confidence.';return}
@@ -101,8 +105,7 @@ function showStage(next){halt();status();stage=next;flow=moments[stage]?new Revi
 const initialEmpty=$('empty').innerHTML;
 async function enableCamera(){status();$('camera').disabled=true;$('demo').disabled=true;try{
  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('unsupported');stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});video.srcObject=stream;video.muted=true;await video.play();$('empty').hidden=true;
- if($('analysis-consent').checked){status('Preparing camera and voice estimates. Look toward the camera while gaze calibrates…');try{const ready=await prepareCapture(video,stream);captureReady=Object.values(ready).some(Boolean);status(ready.gaze?'Analysis ready. Start your answer when comfortable.':'Gaze calibration unavailable. Other available evidence can still be used.')}catch{disposeCapture();status('Analysis tools could not load. You can still record and review without highlights.')}}
- else status('Camera ready. Start your answer when you’re comfortable.');
+ status('Preparing camera and voice estimates. Look toward the camera while gaze calibrates…');try{const ready=await prepareCapture(video,stream);captureReady=Object.values(ready).some(Boolean);status(ready.gaze?'Analysis ready. Start your answer when comfortable.':'Gaze calibration unavailable. Other available evidence can still be used.')}catch{disposeCapture();status('Analysis tools could not load. Your review will still include saved practice guidance.')}
  $('record').disabled=false;
  }catch{releaseCamera();$('camera').disabled=false;status('Camera or microphone unavailable. Check browser permissions, or explore the example review.')}finally{$('demo').disabled=false}}
 function bindCamera(){$('camera').onclick=enableCamera}
@@ -113,7 +116,7 @@ $('record').onclick=()=>{if(recorder?.state==='recording'){$('record').disabled=
  recorder.onstop=()=>{clearInterval(recordTimer);duration=Math.min(305,Math.max(.1,(performance.now()-recordStarted)/1000));
  const segments=captureReady?finishCapture(duration):[];releaseCamera();recordedURL=URL.createObjectURL(new Blob(chunks,{type:recorder.mimeType}));video.src=recordedURL;$('demo').disabled=false;
  reviewInput={question:questions[questionIndex],duration,segments};
- if($('analysis-consent').checked&&segments.length)analyzeAnswer();else{showStage(1);status($('analysis-consent').checked?'Not enough evidence for analysis. You can still review your recording.':'Playback is ready. Analysis was not selected.')}
+ analyzeAnswer();
  };
  recorder.start();recordStarted=performance.now();if(captureReady)startCapture();$('record').textContent='Finish answer';$('demo').disabled=true;$('media-badge').hidden=false;$('media-badge').textContent='RECORDING';recordTimer=setInterval(()=>{const secs=(performance.now()-recordStarted)/1000;$('clock').textContent=time(secs);if(secs>=180&&recorder.state==='recording')recorder.stop()},200)
  }catch{status('Recording could not start in this browser. Try the example review.')}};

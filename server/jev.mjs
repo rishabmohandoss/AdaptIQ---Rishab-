@@ -1,18 +1,8 @@
 import { setTimeout as sleep } from 'node:timers/promises';
+import {feedbackCatalog as labels, withPracticeFeedback} from '../design/feedback-catalog.mjs';
 
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const finite = (n, min, max) => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
-const labels = {
-  steady_gaze: ['video','strength','A steady connection','Your calibrated gaze estimate stayed near the camera during this moment.'],
-  gaze_reset: ['video','improvement','Give yourself a reset','Your gaze estimate moved away from the camera here. Try returning to the lens after gathering your thoughts.'],
-  smile: ['video','strength','A moment of expression','The camera detected a smile-like expression here. Notice how it supports the point you are making.'],
-  comfortable_pace: ['audio','strength','Room for your words','Your estimated speaking pace gives the listener room to follow.'],
-  slow_down: ['audio','improvement','Let that point land','Your estimated pace picked up here. Try a brief pause before your next point.'],
-  scene_setup: ['audio','strength','You set the scene','This part gives the listener concrete context for your example.'],
-  clear_result: ['audio','strength','A clear outcome','You explain a concrete result of the actions you described.'],
-  specific_action: ['audio','strength','Your contribution is clear','You describe a specific action you took. Keep that detail in your next attempt.'],
-  unclear_action: ['audio','improvement','Make your contribution clearer','Try naming the specific action you took in this part of the story.'],
-};
 export function validateReview(body) {
   if (!body || typeof body.question !== 'string' || !body.question.trim() || body.question.length > 2000 || !finite(body.duration, .1, 305) || !Array.isArray(body.segments) || body.segments.length > 36) throw fail(400,'Invalid review data.');
   let previousEnd=0, textLength=0;
@@ -69,7 +59,7 @@ export function parseJevResponse(data,request,input,threshold=.75){
       if(!Object.hasOwn(q.criteria,a.choice))throw fail(502,'Analysis returned an invalid label.');
       if(a.choice==='none'||a.confidence<threshold||a.probabilities[a.choice]<threshold)continue;
       const segment=input.segments[Number(id.split('_')[1])];const [mode,type,title,message]=labels[a.choice];
-      highlights.push({start:segment.start,end:segment.end,mode,type,title,message,confidence:a.confidence,label:a.choice});
+      highlights.push({start:segment.start,end:segment.end,mode,type,title,message,confidence:a.confidence,label:a.choice,source:'jev'});
     }else{
       if(!finite(a.score,0,q.criteria.length-1)||!a.legend||keys.some(k=>a.legend[k]!==q.criteria[Number(k)]))throw fail(502,'Analysis returned an invalid score.');
       if(a.confidence<threshold)continue;
@@ -80,9 +70,11 @@ export function parseJevResponse(data,request,input,threshold=.75){
   const selected=[];
   for(const mode of ['video','audio']){
     const candidates=highlights.filter(h=>h.mode===mode).sort((a,b)=>b.confidence-a.confidence);
-    const used=new Set();for(const h of candidates){if(used.has(h.label)||selected.filter(s=>s.mode===mode).length>=4)continue;used.add(h.label);selected.push(h)}
+    // Reserve a place for each supported feedback type before filling the rest.
+    const balanced=['strength','improvement'].map(type=>candidates.find(h=>h.type===type)).filter(Boolean);
+    const used=new Set();for(const h of [...balanced,...candidates]){if(used.has(h.label)||selected.filter(s=>s.mode===mode).length>=4)continue;used.add(h.label);selected.push(h)}
   }
-  return {source:'jev',model:data.model,highlights:selected.sort((a,b)=>a.end-b.end),scores,overall:scores.length?Math.round(scores.reduce((sum,s)=>sum+s.score,0)/scores.length*10)/10:null,notice:'Practice estimates from available evidence; not a hiring assessment. Speech timing is approximate.'};
+  return {source:'jev',model:data.model,highlights:withPracticeFeedback(selected,input.duration),scores,overall:scores.length?Math.round(scores.reduce((sum,s)=>sum+s.score,0)/scores.length*10)/10:null,notice:'Practice estimates from available evidence; not a hiring assessment. Speech timing is approximate. Duration tips and practice encouragement use saved rules.'};
 }
 export async function analyzeReview(body,env=process.env,request=fetch,wait=sleep){
   const input=validateReview(body);
@@ -92,7 +84,7 @@ export async function analyzeReview(body,env=process.env,request=fetch,wait=slee
   const threshold=Number(env.JEV_CONFIDENCE_THRESHOLD??.75);
   if(!/^jev-[a-zA-Z0-9.-]+$/.test(model)||!finite(threshold,.5,1))throw fail(503,'Analysis configuration is invalid.');
   const payload=buildJevRequest(input,model);
-  if(!Object.keys(payload.questions).length)return {source:'jev',model:null,highlights:[],scores:[],overall:null,notice:'Not enough measured evidence to create highlights.'};
+  if(!Object.keys(payload.questions).length)return {source:'jev',model:null,highlights:withPracticeFeedback([],input.duration),scores:[],overall:null,notice:'Not enough measured evidence for Jev observations. Showing saved practice guidance only.'};
   for(let attempt=0;attempt<3;attempt++){
     let response;
     try{response=await request('https://api.typesafe.ai/v1/systemone',{method:'POST',signal:AbortSignal.timeout(20000),headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify(payload)})}

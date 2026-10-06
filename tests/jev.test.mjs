@@ -27,10 +27,10 @@ test('missing samples do not turn into gaze or vocal scores',()=>{
  const payload=buildJevRequest(input,'jev-1.13.0');assert.equal(payload.questions.video_0,undefined);assert.equal(payload.questions.score_presence,undefined);assert.equal(payload.questions.score_pace,undefined);assert.ok(payload.questions.audio_0);
 });
 test('no evidence returns no fabricated results or paid request',async()=>{
- const result=await analyzeReview({question:'Example?',duration:3,segments:[]},{JEV_API_KEY:'test'},()=>{throw Error('must not call')});assert.deepEqual(result.highlights,[]);assert.equal(result.overall,null);
+ const result=await analyzeReview({question:'Example?',duration:3,segments:[]},{JEV_API_KEY:'test'},()=>{throw Error('must not call')});assert.deepEqual(result.highlights.map(h=>h.label),['answer_short']);assert.equal(result.highlights[0].source,'rule');assert.equal(result.overall,null);
 });
 test('uncertain observations and scores are withheld',()=>{
- const input=validateReview(fixture),payload=buildJevRequest(input,'jev-1.13.0');const result=parseJevResponse(answer(payload,{low:true}),payload,input);assert.deepEqual(result.highlights,[]);assert.equal(result.overall,null);assert.deepEqual(result.scores,[]);
+ const input=validateReview(fixture),payload=buildJevRequest(input,'jev-1.13.0');const result=parseJevResponse(answer(payload,{low:true}),payload,input);assert.deepEqual(result.highlights.map(h=>h.label),['practice_effort']);assert.equal(result.highlights[0].source,'rule');assert.equal(result.overall,null);assert.deepEqual(result.scores,[]);
 });
 test('invalid times, overlapping clips and unknown features are rejected before inference',()=>{
  for(const edit of [s=>s.end=25,s=>s.start=-1,s=>s.features.emotion='nervous',s=>s.features.paceWpm=NaN]){const body=structuredClone(fixture);edit(body.segments[0]);assert.throws(()=>validateReview(body),{status:400})}

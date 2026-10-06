@@ -30,7 +30,7 @@ Desktop sequence: hero → expanded interview → gaze/voice/structure → conte
 
 ## Product truth
 
-Current studio: editable template questions, per-question recording, silent replay, audio-only replay, full replay, skipping reviews, explicit optional Jev analysis from transcript and measured estimates. The review service must be configured and reachable for coaching.
+Current studio: editable template questions, per-question recording, silent replay, audio-only replay, full replay, skipping reviews, automatic Jev analysis from transcript and measured estimates with disclosure before starting. The review service must be configured and reachable for Jev observations. Saved duration guidance and practice encouragement also work during service failures.
 
 Concepts, labeled at the point of use: live coaching interventions, ADHD/anxiety/autism preference examples, saved session history/readiness progression, organization dashboards. Preference examples are chosen by the learner, not inferred diagnoses. No camera metric is presented as confidence, ability, emotion, or hiring suitability. Demonstration scores are fictional.
 

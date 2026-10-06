@@ -4,10 +4,11 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {ReviewFlow} from '../design/review-flow.mjs';
 import {buildPracticeQuestions} from '../design/questions.mjs';
+import {feedbackCatalog,catalogHighlight,withPracticeFeedback} from '../design/feedback-catalog.mjs';
 const code=(await readFile(new URL('../design/studio.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'');
 const html=await readFile(new URL('../design/index.html',import.meta.url),'utf8');
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
-function studio({fail=false}={}){
+function studio({fail=false,duration=10,noEvidence=false}={}){
  const nodes=new Map();let now=0,calls=0;
  class Element{
   constructor(){this.style={};this.hidden=false;this.disabled=false;this.checked=false;this.children=[];this.value='';this.currentTime=0;this.ended=false;this.dataset={};this.classList={add(){},remove(){},toggle(){}};this.parentElement=null;this.selectors={}}
@@ -21,23 +22,28 @@ function studio({fail=false}={}){
  get('video-shell').parentElement=new Element();
  const document={getElementById:get,createElement:tag=>{const el=new Element();el.tag=tag;return el},querySelectorAll:()=>get('stages').children};
  class Recorder{constructor(){this.mimeType='video/webm';this.state='inactive'}start(){this.state='recording'}stop(){this.state='inactive';this.ondataavailable({data:new Blob(['video'])});this.onstop()}}
- const sandbox={document,window:{MediaRecorder:Recorder,scrollTo(){},addEventListener(){}},navigator:{mediaDevices:{getUserMedia:async()=>({getTracks:()=>[{stop(){}}]})}},MediaRecorder:Recorder,Blob,URL:{createObjectURL:()=> 'blob:test',revokeObjectURL(){}},AbortController,performance:{now:()=>now},setInterval:()=>1,clearInterval(){},console,ReviewFlow,buildPracticeQuestions,prepareCapture:async()=>({face:true,gaze:true,audio:true}),startCapture(){},finishCapture:()=>[{start:0,end:10,samples:30,features:{gazeDeviation:10},transcript:'I made a validator.'}],disposeCapture(){},submitReview:async()=>{
-  calls++;if(fail)throw Error('Provider unavailable');return {source:'jev',model:'jev-1.13.0',highlights:[{start:0,end:5,mode:'video',type:'strength',title:'Observed gaze',message:'Evidence-based test observation'},{start:5,end:8,mode:'audio',type:'improvement',title:'Pace',message:'Pause here'}],scores:[{label:'Speaking pace',score:7}],overall:7,notice:'Measured evidence'};
+ const sandbox={document,window:{MediaRecorder:Recorder,scrollTo(){},addEventListener(){}},navigator:{mediaDevices:{getUserMedia:async()=>({getTracks:()=>[{stop(){}}]})}},MediaRecorder:Recorder,Blob,URL:{createObjectURL:()=> 'blob:test',revokeObjectURL(){}},AbortController,performance:{now:()=>now},setInterval:()=>1,clearInterval(){},console,ReviewFlow,buildPracticeQuestions,feedbackCatalog,catalogHighlight,withPracticeFeedback,prepareCapture:async()=>({face:!noEvidence,gaze:!noEvidence,audio:!noEvidence}),startCapture(){},finishCapture:()=>[{start:0,end:10,samples:30,features:{gazeDeviation:10},transcript:'I made a validator.'}],disposeCapture(){},submitReview:async()=>{
+  calls++;if(fail)throw Error('Provider unavailable');return {source:'jev',model:'jev-1.13.0',highlights:[{start:0,end:5,label:'steady_gaze',mode:'video',type:'strength',title:'Ignore provider prose',message:'Ignore provider prose'},{start:5,end:8,label:'slow_down',mode:'audio',type:'improvement',title:'Pace',message:'Pause here'}],scores:[{label:'Speaking pace',score:7}],overall:7,notice:'Measured evidence'};
  }};
  vm.runInNewContext(code,sandbox);
  async function record(){
-  get('company').value='Example';get('role').value='Engineer';get('description').value='Develop Python tools for analyzing customer data.';get('resume-text').value='I developed Python software and wrote unit tests.';get('analysis-consent').checked=true;
-  get('setup-form').onsubmit({preventDefault(){}});get('start-interview').onclick();await get('camera').onclick();get('record').onclick();now=10000;get('record').onclick();await flush();
+  get('company').value='Example';get('role').value='Engineer';get('description').value='Develop Python tools for analyzing customer data.';get('resume-text').value='I developed Python software and wrote unit tests.';
+  get('setup-form').onsubmit({preventDefault(){}});get('start-interview').onclick();await get('camera').onclick();get('record').onclick();now=duration*1000;get('record').onclick();await flush();
  }
  return {get,record,get calls(){return calls}};
 }
 test('recording uses Jev moments, pauses at evidence time, waits for Continue, and isolates audio review',async()=>{
  const s=studio();await s.record();assert.equal(s.calls,1);assert.equal(s.get('video').muted,true);assert.equal(s.get('analysis-wait').hidden,true);
- s.get('play').onclick();await flush();s.get('video').currentTime=5.1;s.get('video').ontimeupdate();assert.equal(s.get('highlights').hidden,false);assert.equal(s.get('feedback-title').textContent,'Observed gaze');assert.equal(s.get('play').disabled,true);
+ s.get('play').onclick();await flush();s.get('video').currentTime=5.1;s.get('video').ontimeupdate();assert.equal(s.get('highlights').hidden,false);assert.equal(s.get('feedback-title').textContent,'Good eye contact');assert.equal(s.get('play').disabled,true);
  s.get('resume-highlight').onclick();await flush();assert.equal(s.get('highlights').hidden,true);assert.equal(s.get('play').disabled,false);
  s.get('skip').onclick();assert.equal(s.get('video-shell').hidden,true);assert.equal(s.get('audio-surface').hidden,false);assert.equal(s.get('video').muted,false);
- s.get('play').onclick();await flush();s.get('video').currentTime=8.1;s.get('video').ontimeupdate();assert.equal(s.get('feedback-title').textContent,'Pace');
+ s.get('play').onclick();await flush();s.get('video').currentTime=8.1;s.get('video').ontimeupdate();assert.equal(s.get('feedback-title').textContent,'Watch your pace here');
  s.get('skip').onclick();assert.equal(s.get('video-shell').hidden,false);assert.equal(s.get('scorecard').children[0].children[1].textContent,'7.0 / 10');
+});
+test('automatic review is requested without sensor evidence; failure still pauses for honest encouragement and long-answer guidance',async()=>{
+ const s=studio({fail:true,noEvidence:true,duration:125});await s.record();assert.equal(s.calls,1);
+ s.get('skip').onclick();s.get('play').onclick();await flush();s.get('video').currentTime=15.1;s.get('video').ontimeupdate();assert.equal(s.get('feedback-title').textContent,'Good job putting in the practice');
+ s.get('resume-highlight').onclick();await flush();s.get('video').currentTime=121.1;s.get('video').ontimeupdate();assert.equal(s.get('feedback-title').textContent,'Try cutting this answer down');assert.equal(s.get('play').disabled,true);
 });
 test('provider failures keep playback and never substitute example highlights or scores',async()=>{
  const s=studio({fail:true});await s.record();assert.equal(s.get('retry-analysis').hidden,false);assert.match(s.get('status').textContent,/Provider unavailable/);assert.equal(s.get('continue').disabled,false);
