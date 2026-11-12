@@ -1,151 +1,149 @@
-# AdaptIQ — Adaptive Learning Intelligence
+# AdaptIQ — IT 491 Capstone Project
 
-> 🏆 **1st Place — Claude NJIT Hackathon 2026**
+This repository is the shared workspace for the NJIT IT 491 capstone team. The team will test the existing software, fix issues, and build new features with guidance from the original project creators.
 
-**[🚀 Live Demo](https://adapt-iq-dun.vercel.app/)**
+## About AdaptIQ
 
-AdaptIQ is a real-time, multimodal AI assistant that analyzes your body language, facial expressions, and voice during mock interview sessions to provide adaptive, empathetic support. It detects when you're confused, disengaged, or overwhelmed — and responds with intelligent interventions tailored to your cognitive profile.
+AdaptIQ is an interview practice platform designed to support neurodivergent job seekers. The existing project includes webcam and microphone analysis, live feedback, session scoring, and support profiles for ADHD, anxiety, and ASD.
 
-Built for the **Economic Empowerment and Education** track, AdaptIQ is designed to level the playing field for neurodivergent job seekers. 1 in 5 Americans are neurodivergent, yet standard virtual interview formats rarely account for how differently people process and communicate information.
+## Project Goals
 
----
+- Understand the existing code and features.
+- Get the project running locally.
+- Test the application and report issues.
+- Improve usability and reliability.
+- Develop new features with the project mentors.
+- Keep setup instructions and documentation updated.
 
-## Demo
+## Getting Access
 
-> **No install needed** — runs entirely in the browser.  
-> Visit **[adapt-iq-dun.vercel.app](https://adapt-iq-dun.vercel.app/)**, allow camera/mic access, select a cognitive profile, and start a mock session.
-
----
-
-## What It Does
-
-AdaptIQ runs a continuous **Perceive → Process → Act** loop:
-
-1. **Perceives** — captures webcam and microphone input, extracting facial landmarks, eye gaze, head pose, and audio features locally on your device
-2. **Processes** — sends semantic metadata (not raw video) to Claude via API for reasoning about your current state
-3. **Acts** — delivers real-time interventions, adjusts support style, and surfaces live feedback on a dashboard
-
----
-
-## Features
-
-- 🎭 **Multimodal perception** — face mesh tracking, eye gaze estimation, head pose analysis, blink rate, and audio processing
-- 🧠 **Claude-powered reasoning** — interprets your biometric state and decides on empathetic, context-aware interventions
-- 👤 **Three cognitive profiles** — tailored modes for ADHD, Anxiety, and ASD with different intervention styles and sensitivity thresholds
-- 📊 **Live biometric dashboard** — real-time metrics including Gaze Deviation Score, Head Pose Drift, Vocal Energy Spread, Speech Rate, and more
-- 🎯 **Session scoring** — end-of-session breakdown across Eye Contact, Head Stability, Vocal Confidence, and Speech Clarity with an overall grade
-- 🔔 **Smart interventions** — non-intrusive overlay cards triggered when anomalies are detected (e.g. frantic eye movement, long silences)
-- 🔒 **Privacy-first** — only semantic metadata is sent to the cloud; raw video never leaves your device
-
----
-
-## Cognitive Profiles
-
-| Profile | Focus | Intervention Style |
-|---|---|---|
-| **ADHD** | Attention & engagement | High-energy, frequent micro-breaks, gamification cues |
-| **Anxiety** | Calm & regulation | Breathing prompts, reduced visual noise, reassuring check-ins |
-| **ASD** | Structure & predictability | Consistent pacing, explicit transitions, clear progress markers |
-
----
-
-## Metrics Tracked
-
-**Biometric Signals**
-- Gaze Deviation Score (GDS)
-- Head Pose Drift (HPD)
-- Blink Rate Analysis (BRA)
-- Vocal Energy Spread (VES)
-- Speech Rate (SR)
-
-**Derived Scores**
-- Off-Screen Ratio (OSR)
-- Engagement Time (ET)
-- Cognitive Engine Score (CES)
-- Silence/Latency Ratio (SILR)
-- Pitch Variance Score (PVS)
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Face & Gaze Tracking | MediaPipe Face Mesh, face-api.js |
-| Audio Analysis | Meyda.js (real-time audio features) |
-| AI Reasoning | Claude Sonnet (Anthropic API) |
-| Frontend | Vanilla HTML/CSS/JS, Chart.js |
-| Hosting | Vercel |
-
----
-
-## Project Structure
-
-```
-├── frontend/         # UI components and dashboard
-├── perception/       # Face mesh, gaze, and audio processing
-├── integration/      # API orchestration and Claude integration
-├── demo/             # Demo assets
-├── PRD-details/      # Product requirements and design docs
-├── index.html        # Main AdaptIQ dashboard
-└── projectplan.md    # Architecture and implementation roadmap
-```
-
----
+1. Create a GitHub account.
+2. Send your GitHub username to the repository owner.
+3. Accept the collaborator invitation.
+4. Clone this team's repository using the steps below.
 
 ## Getting Started
 
-### Prerequisites
-- A modern browser (Chrome recommended)
-- Webcam and microphone
-- Anthropic API key
+### Requirements
 
-### Run Locally
+- Git
+- Node.js and npm
+- A modern browser
+- A webcam and microphone for testing interview features
+
+### Download the Project
+
+On this repository's GitHub page, click **Code** and copy the HTTPS URL.
+
+Replace `PASTE_REPOSITORY_URL_HERE` with the URL you copied:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/adaptiq.git
-cd adaptiq
+git clone PASTE_REPOSITORY_URL_HERE AdaptIQ-IT491
+cd AdaptIQ-IT491
+```
 
-# Serve with any static server
+### Run the Project
+
+Start a local server:
+
+```bash
 npx serve .
 ```
 
-Then open `http://localhost:3000`.
+Open the local URL shown in your terminal. Allow camera and microphone access when testing features that need them.
 
----
+Some features require additional configuration. Check with the project mentors for the approved setup and review `config.example.js`.
 
-## How It Works
+Do not commit private API keys or credentials. Values included in browser JavaScript are visible to visitors.
 
-All sensor data is abstracted into a lightweight JSON state before being sent to Claude:
+## Project Structure
 
-```json
-{
-  "gazeDeviation": 2.3,
-  "headPoseDrift": 12.5,
-  "blinkRate": 4,
-  "speechRate": 85,
-  "offScreenRatio": 0.3,
-  "profile": "adhd"
-}
+| File or Folder | Purpose |
+| --- | --- |
+| `index.html` | Site entry page |
+| `app.html` | Application page |
+| `frontend/` | Frontend components and assets |
+| `perception/` | Webcam, gaze, and audio processing |
+| `integration/` | Integration code |
+| `PRD-details/` | Product requirements and design documents |
+| `demo/` | Demo assets |
+| `tests/` | Existing test files |
+| `config.example.js` | Example runtime configuration |
+| `projectplan.md` | Existing project plan |
+
+## Contributing
+
+### 1. Get the Latest Code
+
+```bash
+git switch main
+git pull origin main
 ```
 
-Claude interprets this state and returns either a natural language intervention or triggers a UI action — like pausing the session or surfacing a breathing prompt.
+### 2. Create a Branch
 
-**Target latency: < 500ms end-to-end.**
+Use your name and a short description of your task:
 
----
+```bash
+git switch -c your-name/task-name
+```
 
-## Built By
+### 3. Save and Upload Your Changes
 
-Built at the **Claude NJIT Hackathon 2026** — themed around social impact inspired by Anthropic CEO Dario Amodei's essay *Machines of Loving Grace*.
+Replace the example file path with the file you changed:
 
-- [Sneh Bhatt](https://www.linkedin.com/in/sneh-bhatt-/)
-- [Aagam Ambavi](https://www.linkedin.com/in/aagam-ambavi/)
-- [Mayukha Ajeesh Ramsha Nath](https://www.linkedin.com/in/mayukha-ar/)
-- [Rishab Mohandoss](https://www.linkedin.com/in/rishab-mohandoss/)
+```bash
+git add path/to/changed-file
+git commit -m "Describe your change"
+git push -u origin your-name/task-name
+```
 
----
+### 4. Open a Pull Request
 
-## License
+Open a pull request on GitHub from your branch into `main`.
 
-MIT
+Include:
+
+- What you changed
+- Why you changed it
+- How you tested it
+- Screenshots if the appearance changed
+
+Ask a teammate or mentor to review your work before merging.
+
+## Testing and Reporting Issues
+
+Test page loading, navigation, camera and microphone access, interview sessions, feedback, and session results.
+
+When reporting a problem through GitHub Issues, include:
+
+- A clear title
+- Steps to reproduce the problem
+- What you expected to happen
+- What actually happened
+- Your browser and operating system
+- Relevant screenshots or error messages
+
+Remove private information before posting screenshots or logs.
+
+## Team Guidelines
+
+- Discuss larger changes before starting.
+- Use a separate branch for each task.
+- Keep commits focused and clearly named.
+- Test changes before submitting a pull request.
+- Update documentation when setup or features change.
+- Keep original credits and applicable license notices.
+
+## Original Project and Credits
+
+This repository is forked from the [original AdaptIQ repository](https://github.com/rishabmohandoss/AdaptIQ---Rishab-).
+
+AdaptIQ was originally built at the Claude NJIT Hackathon 2026 by:
+
+- Sneh Bhatt
+- Mayukha Ajeesh Ramsha Nath
+- Rishab Mohandoss
+- Aagam Ambavi
+
+The NJIT IT 491 capstone team is continuing development of the existing project.
