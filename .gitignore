@@ -1,2 +1,18 @@
+# Firebase configuration
 .firebase/
 config.js
+
+# Python virtual environment
+backend/.venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Local development files
+.pytest_cache/
