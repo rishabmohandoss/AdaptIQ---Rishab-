@@ -18,6 +18,8 @@ This document outlines the conceptual framework and implementation strategy for 
 
 ## 2. Implementation Strategy
 
+The proposed [interview analytics data contract](analytics-data-contract.md) defines the session data handoff, timeline offsets, and retention rules.
+
 ### High-Level Architecture
 The system operates on a **Perceive → Process → Act** loop. To maintain low latency, processing must be distributed, with heavy feature extraction handled at the edge (on the user's device) and reasoning handled by the LLM.
 
