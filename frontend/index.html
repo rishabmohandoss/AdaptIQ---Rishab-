@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdaptIQ — Adaptive Interview Coaching</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase (compat builds — same pattern used in app.html) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+<style>
+  :root{
+    --bg:        #0a0a0a;
+    --bg-alt:    #111111;
+    --line:      rgba(255,255,255,0.12);
+    --line-dim:  rgba(255,255,255,0.07);
+    --ink:       #f2f2f2;
+    --ink-dim:   rgba(242,242,242,0.62);
+    --ink-faint: rgba(242,242,242,0.36);
+    --accent:    #2f7dfa;
+    --font: 'Space Grotesk', -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--font);
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 32px;}
+
+  /* reveal-on-scroll */
+  .reveal{opacity:0; transform:translateY(18px); transition:opacity 700ms ease, transform 700ms ease;}
+  .reveal.visible{opacity:1; transform:translateY(0);}
+  @media (prefers-reduced-motion:reduce){ .reveal{transition:none; opacity:1; transform:none;} }
+
+  /* NAV */
+  nav{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    border-bottom:1px solid var(--line-dim);
+    background:rgba(10,10,10,0.7); backdrop-filter:blur(10px);
+  }
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; height:64px;}
+  .logo{font-size:16px; font-weight:700; letter-spacing:-0.01em;}
+  .logo span{color:var(--accent);}
+  .nav-links{display:flex; gap:28px; font-size:13.5px; color:var(--ink-dim);}
+  .nav-links a:hover{color:var(--ink);}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    font-family:var(--font); font-weight:600; cursor:pointer;
+    border-radius:4px; transition:all 140ms ease; white-space:nowrap; border:none;
+  }
+  .btn-primary{background:var(--ink); color:#0a0a0a; padding:9px 18px; font-size:13.5px;}
+  .btn-primary:hover{background:var(--accent); color:#fff;}
+  .btn-outline{background:transparent; color:var(--ink); border:1px solid var(--line); padding:8px 17px; font-size:13.5px;}
+  .btn-outline:hover{border-color:var(--ink);}
+  .btn-lg{padding:14px 28px; font-size:15px;}
+  .btn .g-icon{width:16px; height:16px; flex-shrink:0;}
+  .btn[disabled]{opacity:0.6; cursor:default;}
+
+  /* ---- SCREEN 1 : STAT ---- */
+  .screen{
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:120px 32px 60px; border-bottom:1px solid var(--line-dim);
+  }
+  .stat-number{
+    font-size:clamp(64px,14vw,168px); font-weight:700; letter-spacing:-0.04em; line-height:1;
+  }
+  .stat-caption{
+    font-size:18px; color:var(--ink-dim); max-width:520px; margin:28px auto 0; line-height:1.5;
+  }
+  .stat-source{
+    font-size:12px; color:var(--ink-faint); margin-top:18px; letter-spacing:0.02em;
+  }
+  .hero-cta-row{display:flex; gap:14px; justify-content:center; margin-top:36px; flex-wrap:wrap;}
+  .scroll-cue{
+    margin-top:56px; font-size:12px; color:var(--ink-faint); letter-spacing:0.08em; text-transform:uppercase;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .scroll-cue .line{width:1px; height:32px; background:var(--line);}
+  .screen-inner{will-change:transform,opacity;}
+
+  /* ---- pinned scroll chapter ---- */
+  .pin-story{position:relative; height:320vh;}
+  .pin-inner{
+    position:sticky; top:0; height:100vh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; overflow:hidden;
+  }
+  .pin-line{
+    position:absolute; left:32px; right:32px; margin:0 auto; max-width:640px;
+    font-size:clamp(24px,4.2vw,44px); font-weight:600; letter-spacing:-0.01em; line-height:1.25;
+    opacity:0; transform:translateY(16px) scale(0.98);
+    transition:opacity 550ms ease, transform 550ms ease;
+  }
+  .pin-line.active{opacity:1; transform:translateY(0) scale(1);}
+  .pin-progress{
+    position:absolute; bottom:48px; left:50%; transform:translateX(-50%);
+    display:flex; gap:8px;
+  }
+  .pin-progress i{width:22px; height:2px; background:var(--line); display:block;}
+  .pin-progress i.active{background:var(--ink);}
+
+  /* ---- generic section ---- */
+  section{padding:140px 0; border-bottom:1px solid var(--line-dim);}
+  section.alt{background:var(--bg-alt);}
+  .eyebrow{
+    font-size:12.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-faint);
+    margin-bottom:20px;
+  }
+  h2{
+    font-size:clamp(28px,4vw,42px); font-weight:700; letter-spacing:-0.02em; line-height:1.15;
+    max-width:680px;
+  }
+  h2.center{margin-left:auto; margin-right:auto; text-align:center;}
+  p.lede{font-size:17px; color:var(--ink-dim); max-width:560px; margin-top:20px; line-height:1.6;}
+  p.lede.center{margin-left:auto; margin-right:auto; text-align:center;}
+
+  /* ---- problem section : two columns, plain ---- */
+  .split{display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:start; margin-top:64px;}
+  .split-col h3{font-size:13px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-faint); margin-bottom:20px; font-weight:600;}
+  .split-col ul{list-style:none; display:flex; flex-direction:column; gap:16px;}
+  .split-col li{font-size:15.5px; color:var(--ink-dim); line-height:1.55; padding-left:22px; position:relative;}
+  .split-col.without li::before{content:'✕'; position:absolute; left:0; color:var(--ink-faint); font-size:12px; top:3px;}
+  .split-col.with li::before{content:'✓'; position:absolute; left:0; color:var(--accent); font-size:12px; top:3px;}
+
+  /* ---- how it works : numbered rows, no cards ---- */
+  .rows{margin-top:64px; display:flex; flex-direction:column;}
+  .row{
+    display:grid; grid-template-columns:80px 1fr; gap:32px; padding:36px 0;
+    border-top:1px solid var(--line-dim);
+  }
+  .rows .row:last-child{border-bottom:1px solid var(--line-dim);}
+  .row-num{font-size:14px; color:var(--ink-faint); font-weight:600; padding-top:2px;}
+  .row-body h4{font-size:19px; font-weight:700; margin-bottom:8px;}
+  .row-body p{font-size:15px; color:var(--ink-dim); max-width:600px; line-height:1.6;}
+
+  /* ---- feature list : simple grid, bordered, no icons/gradients ---- */
+  .grid-4{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line-dim); margin-top:64px; border:1px solid var(--line-dim);}
+  .grid-4 .cell{background:var(--bg); padding:32px 26px;}
+  .cell h4{font-size:15px; font-weight:700; margin-bottom:10px;}
+  .cell p{font-size:13.5px; color:var(--ink-dim); line-height:1.55;}
+
+  /* ---- testimonial (placeholder, clearly labeled) ---- */
+  .testimonial{padding:100px 0; border-bottom:1px solid var(--line-dim); text-align:center;}
+  .testimonial .wrap{max-width:760px;}
+  .testimonial blockquote{
+    font-size:clamp(20px,3vw,28px); font-weight:600; letter-spacing:-0.01em; line-height:1.4;
+    color:var(--ink);
+  }
+  .testimonial .attribution{margin-top:24px; font-size:13.5px; color:var(--ink-dim);}
+  .testimonial .placeholder-tag{
+    display:inline-block; margin-top:18px; font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--ink-faint); border:1px solid var(--line); border-radius:999px; padding:5px 12px;
+  }
+
+  /* ---- segments (who buys this) : rows with tag ---- */
+  .segments{margin-top:64px; display:flex; flex-direction:column;}
+  .segment{
+    display:grid; grid-template-columns:220px 1fr; gap:32px; padding:32px 0;
+    border-top:1px solid var(--line-dim); align-items:baseline;
+  }
+  .segments .segment:last-child{border-bottom:1px solid var(--line-dim);}
+  .segment-tag{font-size:14px; font-weight:700;}
+  .segment p{font-size:15px; color:var(--ink-dim); line-height:1.6;}
+
+  /* ---- built by (real credibility) ---- */
+  .team-grid{margin-top:56px; display:grid; grid-template-columns:repeat(4,1fr); gap:24px;}
+  .team-card{border-top:1px solid var(--line-dim); padding-top:20px;}
+  .team-card .name{font-size:15px; font-weight:700;}
+  .team-card a{font-size:13px; color:var(--ink-dim); display:inline-block; margin-top:6px;}
+  .team-card a:hover{color:var(--accent);}
+
+  /* ---- security / trust : plain list, no icon boxes ---- */
+  .trust-list{margin-top:56px; display:grid; grid-template-columns:1fr 1fr; gap:20px 48px;}
+  .trust-item{padding:20px 0; border-top:1px solid var(--line-dim);}
+  .trust-item h4{font-size:15px; font-weight:700; margin-bottom:6px;}
+  .trust-item p{font-size:14px; color:var(--ink-dim); line-height:1.55;}
+
+  /* ---- credibility strip ---- */
+  .cred-strip{
+    display:flex; align-items:center; justify-content:center; gap:14px;
+    font-size:13.5px; color:var(--ink-dim); padding:28px 0;
+  }
+  .cred-strip .divider{width:1px; height:16px; background:var(--line);}
+
+  /* ---- FAQ ---- */
+  .faq-list{margin-top:56px; display:flex; flex-direction:column;}
+  .faq-item{border-top:1px solid var(--line-dim); padding:22px 0;}
+  .faq-list .faq-item:last-child{border-bottom:1px solid var(--line-dim);}
+  .faq-item summary{
+    font-size:15.5px; font-weight:600; cursor:pointer; list-style:none;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .faq-item summary::-webkit-details-marker{display:none;}
+  .faq-item summary::after{content:'+'; font-size:20px; color:var(--ink-faint); font-weight:400;}
+  .faq-item[open] summary::after{content:'−';}
+  .faq-item p{font-size:14.5px; color:var(--ink-dim); line-height:1.6; margin-top:14px; max-width:640px;}
+
+  /* ---- final CTA ---- */
+  .final{text-align:center;}
+  .final h2{margin:0 auto 16px;}
+  .final .cta-row{display:flex; gap:14px; justify-content:center; margin-top:36px; flex-wrap:wrap;}
+
+  /* ---- plans ---- */
+  .plans-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line-dim); margin-top:56px; border:1px solid var(--line-dim);}
+  .plan{background:var(--bg); padding:36px 30px; display:flex; flex-direction:column;}
+  .plan.featured{background:var(--bg-alt);}
+  .plan-name{font-size:17px; font-weight:700; margin-bottom:10px;}
+  .plan-desc{font-size:13.5px; color:var(--ink-dim); line-height:1.55; margin-bottom:24px; min-height:60px;}
+  .plan-features{list-style:none; display:flex; flex-direction:column; gap:12px; margin-bottom:28px; flex-grow:1;}
+  .plan-features li{font-size:13.5px; color:var(--ink-dim); padding-left:16px; position:relative;}
+  .plan-features li::before{content:'—'; position:absolute; left:0; color:var(--ink-faint);}
+  .plan-cta{width:100%;}
+
+  footer{padding:56px 0 32px;}
+  .footer-grid{display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:32px; padding-bottom:40px; border-bottom:1px solid var(--line-dim);}
+  .footer-brand p{font-size:13px; color:var(--ink-faint); margin-top:8px;}
+  .footer-col h5{font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-faint); font-weight:600; margin-bottom:16px;}
+  .footer-col a{display:block; font-size:13.5px; color:var(--ink-dim); margin-bottom:10px;}
+  .footer-col a:hover{color:var(--ink);}
+  .footer-bottom{padding-top:24px; text-align:center;}
+  .footer-bottom p{font-size:13px; color:var(--ink-faint);}
+
+  @media (max-width:860px){
+    .split, .grid-4, .team-grid{grid-template-columns:1fr;}
+    .segment{grid-template-columns:1fr;}
+    .trust-list{grid-template-columns:1fr;}
+    .nav-links{display:none;}
+    .row{grid-template-columns:1fr; gap:10px;}
+    .plans-grid{grid-template-columns:1fr;}
+    .footer-grid{grid-template-columns:1fr 1fr; gap:28px;}
+  }
+</style>
+</head>
+<body>
+
+  <nav>
+    <div class="wrap">
+      <div class="logo">Adapt<span>IQ</span></div>
+      <div class="nav-links">
+        <a href="#problem">Why It Matters</a>
+        <a href="#how">Product</a>
+        <a href="#segments">Who It's For</a>
+        <a href="#trust">Security</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <button class="btn btn-primary" id="nav-signin-btn" type="button">
+        <svg class="g-icon" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3c-7.4 0-13.7 4.2-16.9 10.3z"/><path fill="#4CAF50" d="M24 45c5.2 0 10-2 13.5-5.2l-6.2-5.3C29.4 36.4 26.8 37 24 37c-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.4 40.7 16.1 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.5l6.2 5.3C40.9 36 44 30.6 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+        Sign in with Google
+      </button>
+    </div>
+  </nav>
+
+  <!-- SCREEN 1: STAT -->
+  <header class="screen">
+    <div class="screen-inner" id="hero-parallax">
+      <div class="stat-number reveal visible">1 in 5</div>
+      <p class="stat-caption reveal visible">Americans are neurodivergent — and most interview preparation tools weren't built with them in mind.</p>
+      <p class="stat-source reveal visible">AdaptIQ closes that gap with real-time, adaptive AI coaching.</p>
+      <div class="hero-cta-row reveal visible">
+        <button class="btn btn-primary btn-lg" id="hero-signin-btn" type="button">
+          <svg class="g-icon" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3c-7.4 0-13.7 4.2-16.9 10.3z"/><path fill="#4CAF50" d="M24 45c5.2 0 10-2 13.5-5.2l-6.2-5.3C29.4 36.4 26.8 37 24 37c-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.4 40.7 16.1 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.5l6.2 5.3C40.9 36 44 30.6 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+          Sign in with Google
+        </button>
+        <a class="btn btn-outline btn-lg" href="#story">See How It Works</a>
+      </div>
+      <p class="stat-source reveal visible" id="auth-status-note" style="margin-top:14px;"></p>
+    </div>
+    <div class="scroll-cue"><span>Scroll</span><span class="line"></span></div>
+  </header>
+
+  <!-- PINNED CHAPTER -->
+  <section class="pin-story" id="story">
+    <div class="pin-inner">
+      <p class="pin-line" data-i="0">It notices hesitation before you do.</p>
+      <p class="pin-line" data-i="1">It adapts in real time — not after the fact.</p>
+      <p class="pin-line" data-i="2">It reports what actually happened.</p>
+      <div class="pin-progress"><i data-i="0"></i><i data-i="1"></i><i data-i="2"></i></div>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section id="problem">
+    <div class="wrap">
+      <div class="eyebrow reveal">The Problem</div>
+      <h2 class="reveal">Standard interview formats screen out capable candidates before they get a fair shot.</h2>
+      <p class="lede reveal">Programs serving neurodivergent job seekers see this every cohort: strong candidates who freeze up, mask exhaustively, or get marked down for delivery instead of substance.</p>
+      <div class="split">
+        <div class="split-col without reveal">
+          <h3>Without Adaptive Prep</h3>
+          <ul>
+            <li>One generic mock-interview format for every candidate</li>
+            <li>Feedback focused on delivery, not on what was actually said</li>
+            <li>No visibility into where a candidate struggles until it's too late</li>
+            <li>Coaching staff time spread thin across large cohorts</li>
+          </ul>
+        </div>
+        <div class="split-col with reveal">
+          <h3>With AdaptIQ</h3>
+          <ul>
+            <li>Coaching adjusts to each candidate's cognitive profile</li>
+            <li>Feedback separates answer content from delivery signals</li>
+            <li>Session-level data shows staff exactly where to focus support</li>
+            <li>Candidates can practice independently, at scale, between sessions</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="alt" id="how">
+    <div class="wrap">
+      <div class="eyebrow reveal">The Product</div>
+      <h2 class="reveal">One continuous loop, running during every practice session.</h2>
+      <p class="lede reveal">Perceive, process, and act — in real time, without adding a single manual step for your staff.</p>
+      <div class="rows">
+        <div class="row reveal">
+          <div class="row-num">01</div>
+          <div class="row-body">
+            <h4>Perceive</h4>
+            <p>The browser locally reads facial landmarks, eye gaze, head pose, and voice during the session. Nothing raw ever leaves the candidate's device.</p>
+          </div>
+        </div>
+        <div class="row reveal">
+          <div class="row-num">02</div>
+          <div class="row-body">
+            <h4>Process</h4>
+            <p>Lightweight behavioral signals — not video — are reasoned over by Claude to identify confusion, disengagement, or overwhelm as it happens.</p>
+          </div>
+        </div>
+        <div class="row reveal">
+          <div class="row-num">03</div>
+          <div class="row-body">
+            <h4>Act</h4>
+            <p>The candidate gets a real-time, profile-matched intervention. After the session, staff get a structured report — not just a number.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">What's Included</div>
+      <h2 class="reveal">Built for programs, not just individuals.</h2>
+      <div class="grid-4">
+        <div class="cell reveal">
+          <h4>Profile-Based Coaching</h4>
+          <p>ADHD, anxiety, and ASD-oriented profiles, each with distinct intervention styles and sensitivity thresholds.</p>
+        </div>
+        <div class="cell reveal">
+          <h4>Session Reporting</h4>
+          <p>Per-session breakdowns across eye contact, pacing, vocal confidence, and clarity, plus a summary staff can act on.</p>
+        </div>
+        <div class="cell reveal">
+          <h4>Independent Practice</h4>
+          <p>Candidates can run sessions on their own time — no scheduling a coach for every rep.</p>
+        </div>
+        <div class="cell reveal">
+          <h4>Claude-Backed Reasoning</h4>
+          <p>Interventions and answer feedback come from live model reasoning, not a static script.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOCIAL PROOF (placeholder, clearly labeled — no fabricated quotes) -->
+  <section class="testimonial alt">
+    <div class="wrap">
+      <blockquote class="reveal">"A candidate who used to freeze up in mock interviews walked into her first real one and actually finished her answers."</blockquote>
+      <div class="attribution reveal">Illustrative example — Career Services Advisor</div>
+      <div class="placeholder-tag reveal">Illustrative — real cohort quotes coming soon</div>
+    </div>
+  </section>
+
+  <!-- SEGMENTS -->
+  <section id="segments">
+    <div class="wrap">
+      <div class="eyebrow reveal">Who It's For</div>
+      <h2 class="reveal">Teams that prepare people for interviews at scale.</h2>
+      <div class="segments">
+        <div class="segment reveal">
+          <div class="segment-tag">Workforce Agencies</div>
+          <p>Give caseworkers a scalable way to prepare job seekers between one-on-one sessions, with data on who needs more support.</p>
+        </div>
+        <div class="segment reveal">
+          <div class="segment-tag">Career Centers</div>
+          <p>Support a full cohort of students without requiring a coach to sit in on every mock interview.</p>
+        </div>
+        <div class="segment reveal">
+          <div class="segment-tag">Non-Profits</div>
+          <p>Extend the reach of neurodivergent employment programs without proportionally scaling headcount.</p>
+        </div>
+        <div class="segment reveal">
+          <div class="segment-tag">Employers &amp; DEI Teams</div>
+          <p>Offer candidates a genuinely accessible way to prepare, rather than a format that filters out neurodivergent talent by default.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BUILT BY (real credibility, not fabricated) -->
+  <section class="alt">
+    <div class="wrap">
+      <div class="eyebrow reveal">Built By</div>
+      <h2 class="reveal">Built at the Claude NJIT Hackathon 2026 — 1st place, Economic Empowerment &amp; Education track.</h2>
+      <p class="lede reveal">Themed around social impact, inspired by Anthropic CEO Dario Amodei's essay <em>Machines of Loving Grace</em>.</p>
+      <div class="team-grid">
+        <div class="team-card reveal">
+          <div class="name">Sneh Bhatt</div>
+          <a href="https://www.linkedin.com/in/sneh-bhatt-/" target="_blank" rel="noopener">LinkedIn ↗</a>
+        </div>
+        <div class="team-card reveal">
+          <div class="name">Aagam Ambavi</div>
+          <a href="https://www.linkedin.com/in/aagam-ambavi/" target="_blank" rel="noopener">LinkedIn ↗</a>
+        </div>
+        <div class="team-card reveal">
+          <div class="name">Mayukha Ajeesh Ramsha Nath</div>
+          <a href="https://www.linkedin.com/in/mayukha-ar/" target="_blank" rel="noopener">LinkedIn ↗</a>
+        </div>
+        <div class="team-card reveal">
+          <div class="name">Rishab Mohandoss</div>
+          <a href="https://www.linkedin.com/in/rishab-mohandoss/" target="_blank" rel="noopener">LinkedIn ↗</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECURITY / TRUST -->
+  <section id="trust">
+    <div class="wrap">
+      <div class="eyebrow reveal">Security &amp; Privacy</div>
+      <h2 class="reveal">Built to survive procurement review, not just a demo.</h2>
+      <p class="lede reveal">Video and audio never leave the candidate's device unprocessed. Only abstracted behavioral signals — not footage — are sent to Claude for reasoning.</p>
+      <div class="trust-list">
+        <div class="trust-item reveal">
+          <h4>No raw video storage</h4>
+          <p>Face and voice processing happens client-side. Recordings are never uploaded or retained by default.</p>
+        </div>
+        <div class="trust-item reveal">
+          <h4>Metadata-only reasoning</h4>
+          <p>Only derived signals (gaze deviation, pace, tone) are sent for AI reasoning — never raw sensor data.</p>
+        </div>
+        <div class="trust-item reveal">
+          <h4>Per-organization deployment</h4>
+          <p>Session data and reporting stay scoped to your program — not pooled across unrelated organizations.</p>
+        </div>
+        <div class="trust-item reveal">
+          <h4>Built on Anthropic's Claude</h4>
+          <p>Reasoning is powered by Claude via the Anthropic API, under Anthropic's enterprise data-handling terms.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="cred-strip reveal">
+    <span>1st Place — Claude NJIT Hackathon 2026</span>
+    <span class="divider"></span>
+    <span>Economic Empowerment &amp; Education Track</span>
+  </div>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="wrap">
+      <div class="eyebrow reveal">Questions</div>
+      <h2 class="reveal">Before you sign in.</h2>
+      <div class="faq-list">
+        <details class="faq-item reveal">
+          <summary>Does AdaptIQ record or store my video?</summary>
+          <p>No. Face and voice processing happens locally in your browser. Only abstracted behavioral signals — not raw footage — are ever sent anywhere, and only for the purpose of generating real-time coaching.</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary>What do I need to use it?</summary>
+          <p>A modern browser (Chrome recommended), a webcam, and a microphone. No install required — it runs entirely in the browser.</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary>Is it free?</summary>
+          <p>AdaptIQ started as a hackathon project (1st place, Claude NJIT Hackathon 2026) and individual practice sessions are free to use. Program-level plans below are for organizations that want reporting, admin tools, and support at scale.</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary>What happens when I sign in with Google?</summary>
+          <p>Firebase handles authentication — we never see or store your Google password. Once signed in, you're taken straight into the interview practice product.</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary>Which cognitive profiles are supported?</summary>
+          <p>ADHD, Anxiety, and ASD-oriented profiles today, each with different intervention styles and sensitivity thresholds — you can also select specific weaknesses to focus on (eye contact, stuttering, distraction, pacing, anxiety).</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANS -->
+  <section class="alt" id="plans">
+    <div class="wrap">
+      <div class="eyebrow reveal">Plans</div>
+      <h2 class="reveal">Priced for how your program actually runs.</h2>
+      <p class="lede reveal">Every plan includes profile-based coaching, session reporting, and privacy-first processing. Higher tiers add seats, admin controls, and support.</p>
+      <div class="plans-grid">
+        <div class="plan reveal">
+          <div class="plan-name">Pilot</div>
+          <div class="plan-desc">For a single cohort or department testing AdaptIQ before a wider rollout.</div>
+          <ul class="plan-features">
+            <li>Up to 25 candidate seats</li>
+            <li>All cognitive profiles</li>
+            <li>Session reports (CSV export)</li>
+            <li>Email support</li>
+          </ul>
+          <a class="btn btn-outline plan-cta" href="#contact">Contact Sales</a>
+        </div>
+        <div class="plan featured reveal">
+          <div class="plan-name">Program</div>
+          <div class="plan-desc">For workforce agencies and career centers running this year-round.</div>
+          <ul class="plan-features">
+            <li>Unlimited candidate seats</li>
+            <li>Admin dashboard across cohorts</li>
+            <li>Aggregate progress reporting</li>
+            <li>Priority support &amp; onboarding</li>
+          </ul>
+          <a class="btn btn-primary plan-cta" href="#contact">Contact Sales</a>
+        </div>
+        <div class="plan reveal">
+          <div class="plan-name">Enterprise</div>
+          <div class="plan-desc">For employers and multi-site organizations with procurement and compliance requirements.</div>
+          <ul class="plan-features">
+            <li>SSO &amp; role-based access</li>
+            <li>Custom data-retention terms</li>
+            <li>Dedicated implementation manager</li>
+            <li>Security review &amp; DPA support</li>
+          </ul>
+          <a class="btn btn-outline plan-cta" href="#contact">Contact Sales</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="final" id="contact">
+    <div class="wrap">
+      <div class="eyebrow reveal">Get Started</div>
+      <h2 class="reveal">Ready to practice?</h2>
+      <p class="lede center reveal">Sign in and you're straight into a mock interview session — or talk to us about rolling AdaptIQ out across your program.</p>
+      <div class="cta-row reveal">
+        <button class="btn btn-primary btn-lg" id="final-signin-btn" type="button">
+          <svg class="g-icon" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3c-7.4 0-13.7 4.2-16.9 10.3z"/><path fill="#4CAF50" d="M24 45c5.2 0 10-2 13.5-5.2l-6.2-5.3C29.4 36.4 26.8 37 24 37c-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.4 40.7 16.1 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.5l6.2 5.3C40.9 36 44 30.6 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+          Sign in with Google
+        </button>
+        <a class="btn btn-outline btn-lg" href="mailto:hello@adaptiq.study">Talk to Sales</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="footer-grid">
+        <div class="footer-col footer-brand">
+          <div class="logo">Adapt<span>IQ</span></div>
+          <p>Adaptive Learning Intelligence</p>
+        </div>
+        <div class="footer-col">
+          <h5>Product</h5>
+          <a href="#how">How It Works</a>
+          <a href="#segments">Who It's For</a>
+          <a href="#plans">Plans</a>
+        </div>
+        <div class="footer-col">
+          <h5>Trust</h5>
+          <a href="#trust">Security &amp; Privacy</a>
+          <a href="#faq">FAQ</a>
+        </div>
+        <div class="footer-col">
+          <h5>Company</h5>
+          <a href="#contact">Talk to Sales</a>
+          <a href="mailto:hello@adaptiq.study">Contact</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>AdaptIQ — Adaptive Learning Intelligence</p>
+      </div>
+    </div>
+  </footer>
+
+<script>
+  // ============================================================
+  // SCROLL ANIMATIONS (reveal-on-scroll + pinned crossfade chapter)
+  // ============================================================
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const heroInner = document.getElementById('hero-parallax');
+  const pinStory  = document.getElementById('story');
+  const pinLines  = pinStory ? [...pinStory.querySelectorAll('.pin-line')] : [];
+  const pinDots   = pinStory ? [...pinStory.querySelectorAll('.pin-progress i')] : [];
+
+  function onScroll(){
+    if (reduceMotion) return;
+
+    if (heroInner){
+      const p = Math.min(1, window.scrollY / window.innerHeight);
+      heroInner.style.opacity = String(1 - p);
+      heroInner.style.transform = `translateY(${p * -40}px) scale(${1 - p * 0.04})`;
+    }
+
+    if (pinStory){
+      const rect = pinStory.getBoundingClientRect();
+      const scrollable = pinStory.offsetHeight - window.innerHeight;
+      const progress = Math.min(1, Math.max(0, -rect.top / scrollable));
+      const seg = Math.min(pinLines.length - 1, Math.floor(progress * pinLines.length));
+      pinLines.forEach((el, i) => el.classList.toggle('active', i === seg));
+      pinDots.forEach((el, i) => el.classList.toggle('active', i === seg));
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // ============================================================
+  // FIREBASE GOOGLE SIGN-IN — same project/config as app.html
+  // ============================================================
+  (() => {
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH4je7IuR-cARtb8BKI24h1gchxheiHYg",
+      authDomain: "adaptiq-fa584.firebaseapp.com",
+      projectId: "adaptiq-fa584",
+      storageBucket: "adaptiq-fa584.firebasestorage.app",
+      messagingSenderId: "418982090683",
+      appId: "1:418982090683:web:0b029dcaab9b41ad98969e",
+      measurementId: "G-JX5CPG088L"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const statusNote = document.getElementById('auth-status-note');
+    const buttons = [
+      document.getElementById('nav-signin-btn'),
+      document.getElementById('hero-signin-btn'),
+      document.getElementById('final-signin-btn'),
+    ].filter(Boolean);
+
+    let redirected = false;
+    auth.onAuthStateChanged((user) => {
+      if (user && !redirected) {
+        // Returning signed-in user (or just completed the redirect sign-in
+        // round trip) — skip the marketing page, go straight to the product.
+        redirected = true;
+        window.location.href = 'app.html';
+      }
+    });
+    auth.getRedirectResult().catch((err) => {
+      console.warn('[Auth] Redirect sign-in failed:', err);
+      if (statusNote) statusNote.textContent = 'Sign-in failed — please try again.';
+    });
+
+    // signInWithRedirect (not signInWithPopup): popup-based sign-in needs a
+    // cross-origin frame talking to the authDomain, which Safari's default
+    // third-party-storage blocking silently breaks. Redirect is a full page
+    // navigation instead, and is Firebase's recommended approach for Safari.
+    async function handleSignIn() {
+      buttons.forEach(b => b.disabled = true);
+      if (statusNote) statusNote.textContent = 'Redirecting to Google sign-in…';
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await auth.signInWithRedirect(provider);
+        // Page navigates away here — the return trip is handled above.
+      } catch (err) {
+        console.warn('[Auth] Sign-in failed:', err);
+        if (statusNote) statusNote.textContent = 'Sign-in failed — please try again.';
+        buttons.forEach(b => b.disabled = false);
+      }
+    }
+
+    buttons.forEach(b => b.addEventListener('click', handleSignIn));
+  })();
+</script>
+
+</body>
+</html>
