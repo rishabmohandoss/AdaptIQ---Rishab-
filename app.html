@@ -3914,6 +3914,12 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
 
       <div class="h-rule"></div>
 
+      <section aria-labelledby="summary-pace-title" style="margin-top: 24px; padding: 20px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border);">
+        <h2 id="summary-pace-title" class="panel-section-label" style="border: none; padding: 0; margin: 0 0 12px;">Speaking pace</h2>
+        <p id="summary-pace-status"></p>
+        <ul id="summary-pace-findings" hidden></ul>
+      </section>
+
       <div style="margin-top: 24px; padding: 20px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border);">
         <div class="panel-section-label" style="border: none; padding: 0; margin-bottom: 12px;">AI Insights</div>
         <div id="summary-insights" style="font-size: 13px; line-height: 1.8; color: var(--text-secondary);">
@@ -3995,6 +4001,7 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
   </script>
 
   <script src="metrics-math.js"></script>
+  <script src="speaking-pace.js"></script>
   <script>
     // === SENSORS MODULE === //
 // === ADAPTIQ SENSORS MODULE === //
@@ -4581,6 +4588,7 @@ const GazeEngine = (() => {
 window.GazeEngine = GazeEngine;
 
 // ─── AudioEngine ─────────────────────────────────────────────────────────────
+const speakingPace = createSpeakingPace(window.AdaptIQPaceConfig);
 const AudioEngine = (() => {
   let audioCtx = null;
   let analyser = null;
@@ -4624,12 +4632,15 @@ const AudioEngine = (() => {
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
+    recognition.onspeechstart = () => { if (running) speakingPace.speechStart(); };
+    recognition.onspeechend = () => { if (running) speakingPace.speechEnd(); };
     recognition.onresult = (event) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const t = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
           const now = Date.now();
           const text = t.trim();
+          if (running) speakingPace.finalResult(text, event.results[i][0].confidence);
           const words = text.split(/\s+/).filter(Boolean).length;
           const elapsedSec = lastFinalTime ? Math.max(1, (now - lastFinalTime) / 1000) : Math.max(1, words / 2.25);
           const wpm = Math.round(words / (elapsedSec / 60));
@@ -4639,8 +4650,15 @@ const AudioEngine = (() => {
         }
       }
     };
-    recognition.onerror = (e) => console.warn('[AudioEngine] SR error:', e.error);
-    recognition.onend  = () => { if (running) recognition.start(); };
+    recognition.onerror = (e) => {
+      if (running) speakingPace.interrupt();
+      console.warn('[AudioEngine] SR error:', e.error);
+    };
+    recognition.onend = () => {
+      if (!running) return;
+      speakingPace.recognitionEnded();
+      try { recognition.start(); } catch {}
+    };
   }
 
   async function init(mediaStream) {
@@ -4731,6 +4749,7 @@ const AudioEngine = (() => {
   }
 
   function start() {
+    if (running) return;
     running = true;
     if (meydaAnalyzer) meydaAnalyzer.start();
     if (recognition) { try { recognition.start(); } catch {} }
@@ -4738,6 +4757,7 @@ const AudioEngine = (() => {
   }
 
   function stop() {
+    if (!running) return;
     running = false;
     if (meydaAnalyzer) try { meydaAnalyzer.stop(); } catch {}
     if (recognition)   try { recognition.stop();   } catch {}
@@ -5429,7 +5449,7 @@ const SessionManager = (() => {
 
   function start() { sessionStartTime = Date.now(); lastSessionData = null; }
 
-  async function endSession() {
+  async function endSession(paceSummary) {
     const duration = sessionStartTime ? Date.now() - sessionStartTime : 0;
     lastSessionData = {
       duration_ms:       duration,
@@ -5444,7 +5464,7 @@ const SessionManager = (() => {
       transcript_segments: (window.AudioEngine && AudioEngine.getTranscriptSegments) ? AudioEngine.getTranscriptSegments() : [],
       exported_at:       new Date().toISOString(),
     };
-    Bus.emit('session:end', { summary: lastSessionData });
+    Bus.emit('session:end', { summary: lastSessionData, paceSummary });
     if (lastSessionData.scores && window.ClaudeClient) {
       ClaudeClient.generateDebrief(lastSessionData).then(debrief => {
         if (debrief) { lastSessionData.debrief = debrief; Bus.emit('session:debrief', { text: debrief }); }
@@ -5480,7 +5500,7 @@ window.BrainManager = {
   },
   start()      { AnomalyDetector.start(); },
   stop()       { AnomalyDetector.stop(); },
-  endSession() { return SessionManager.endSession(); },
+  endSession(paceSummary) { return SessionManager.endSession(paceSummary); },
 };
   </script>
 
@@ -5586,7 +5606,7 @@ window.BrainManager = {
       _announce();
     }
 
-    return { init, next, prev, reset, setQuestions, get total() { return QUESTIONS.length; }, get(i) { return QUESTIONS[i]; } };
+    return { init, next, prev, reset, setQuestions, get current() { return current; }, get total() { return QUESTIONS.length; }, get(i) { return QUESTIONS[i]; } };
   })();
   </script>
 
@@ -5618,6 +5638,16 @@ window.BrainManager = {
       const videoEl = document.getElementById('video-feed');
       let sensorsInitialized = false;
       let mediaStream = null; // shared stream for both video and audio
+      const paceUnavailable = () => !AudioEngine.hasSpeechRecognition() ||
+        !mediaStream?.getAudioTracks().some(track => track.enabled && track.readyState === 'live');
+      Bus.on('session:started', () => {
+        speakingPace.start(crypto.randomUUID(), QuestionManager.current, paceUnavailable());
+      });
+      Bus.on('question:changed', ({ index }) => {
+        speakingPace.next(index, paceUnavailable());
+      });
+      Bus.on('microphone:changed', () => speakingPace.interrupt());
+      window.addEventListener('pagehide', () => speakingPace.clear());
 
       // profile:selected fires twice: once from UI (no config) then from BrainManager (with config).
       // We only act on the first emission (from UI) to avoid double-init.
@@ -5657,6 +5687,7 @@ window.BrainManager = {
             // Silent background calibration — no UI blocking
             SensorManager.startCalibration().catch(() => {});
           } catch (err) {
+            sensorsInitialized = false;
             console.warn('[AppInit] Permission denied or sensor init failed:', err);
             const errMsg = err.name === 'NotAllowedError'
               ? 'Camera/microphone access denied. AdaptIQ needs these to function.'
@@ -5666,15 +5697,19 @@ window.BrainManager = {
             }
             Bus.emit('calibration:complete', { type: 'gaze' }); // advance UI so user is not stuck
           }
+        } else if (sensorsInitialized && mediaStream) {
+          SensorManager.start();
+          BrainManager.start();
         }
       });
 
       // End session button
       document.getElementById('btn-end-session')?.addEventListener('click', () => {
+        const paceSummary = speakingPace.finish();
         if (window.SensorManager) SensorManager.stop();
         if (window.BrainManager) {
           BrainManager.stop();      // stops AnomalyDetector — no more flags or popups
-          BrainManager.endSession();
+          BrainManager.endSession(paceSummary);
         }
         if (window.InterventionDispatcher) InterventionDispatcher.reset();
       });

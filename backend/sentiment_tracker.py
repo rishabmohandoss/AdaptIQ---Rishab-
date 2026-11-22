@@ -1,6 +1,8 @@
-"""Validate and group AdaptIQ version 1 interview analytics inputs."""
+"""Validate AdaptIQ interview analytics inputs and measure personal speech pace."""
 
 import json
+import math
+from statistics import median
 
 
 class SessionValidationError(ValueError):
@@ -130,3 +132,117 @@ def prepare_sessions(data):
         answer_ids.add(answer["answerId"])
 
     return sessions
+
+
+def _pace_windows(answer, window_ms, min_confidence):
+    """Yield measured WPM for full windows with usable transcript evidence."""
+    segments = answer["transcriptSegments"]
+    if not segments:
+        return
+    measurements = [
+        window for window in answer.get("speechWindows", ()) if "wordCount" in window
+    ]
+    segment_index = measurement_index = 0
+    for start in range(answer["startMs"], answer["endMs"] - window_ms + 1, window_ms):
+        end = start + window_ms
+        while segment_index < len(segments) and segments[segment_index]["endMs"] <= start:
+            segment_index += 1
+        overlapping = []
+        for index in range(segment_index, len(segments)):
+            segment = segments[index]
+            if segment["startMs"] >= end:
+                break
+            if segment["endMs"] > start:
+                overlapping.append(segment)
+        if any(
+            segment.get("confidence", 1) < min_confidence for segment in overlapping
+        ):
+            continue
+
+        while (
+            measurement_index < len(measurements)
+            and measurements[measurement_index]["endMs"] <= start
+        ):
+            measurement_index += 1
+        cursor = start
+        word_count = 0
+        for index in range(measurement_index, len(measurements)):
+            measurement = measurements[index]
+            if measurement["startMs"] != cursor or measurement["endMs"] > end:
+                break
+            cursor = measurement["endMs"]
+            word_count += measurement["wordCount"]
+            if cursor == end:
+                break
+
+        if cursor != end:
+            # Segment timing cannot determine which words fell across a boundary.
+            cursor = start
+            word_count = 0
+            for segment in overlapping:
+                if segment["startMs"] < cursor or segment["endMs"] > end:
+                    break
+                word_count += sum(
+                    any(character.isalnum() for character in token)
+                    for token in segment["text"].split()
+                )
+                cursor = segment["endMs"]
+            else:
+                if word_count:
+                    yield start, end, word_count * 60000 / window_ms
+            continue
+        yield start, end, word_count * 60000 / window_ms
+
+
+def analyze_pace(
+    data, *, window_ms=15000, threshold=0.25, min_windows=3, min_confidence=0.6
+):
+    """Return version 1 pace summaries keyed by session ID.
+
+    Each session represents one student. Its baseline is the median of its
+    eligible full windows. Flag relative deviations at or above threshold.
+    Confidence is checked when supplied. Short trailing windows are excluded.
+    """
+    _check_integer(window_ms, "window_ms")
+    _check_integer(min_windows, "min_windows")
+    if window_ms == 0 or min_windows < 2:
+        raise ValueError("window_ms must be positive and min_windows must be at least two")
+    if type(threshold) not in (int, float) or not 0 < threshold < math.inf:
+        raise ValueError("threshold must be a finite positive relative change")
+    if type(min_confidence) not in (int, float) or not 0 <= min_confidence <= 1:
+        raise ValueError("min_confidence must be between zero and one")
+
+    summaries = {}
+    for session_id, answers in prepare_sessions(data).items():
+        observations = [
+            (answer, start, end, wpm)
+            for answer in answers
+            for start, end, wpm in _pace_windows(answer, window_ms, min_confidence)
+        ]
+        summary = {
+            "version": 1,
+            "sessionId": session_id,
+            "status": "not enough data",
+            "findings": [],
+        }
+        summaries[session_id] = summary
+        if len(observations) < min_windows:
+            continue
+        baseline = median(wpm for _, _, _, wpm in observations)
+        if baseline <= 0:
+            continue
+        summary["status"] = "ok"
+        summary["findings"] = [
+            {
+                "questionId": answer["questionId"],
+                "answerId": answer["answerId"],
+                "startMs": start,
+                "endMs": end,
+                "kind": "pace",
+                "wpm": wpm,
+                "baselineWpm": baseline,
+            }
+            for answer, start, end, wpm in sorted(observations, key=lambda item: item[1])
+            if abs(wpm - baseline) / baseline >= threshold
+        ]
+    return summaries

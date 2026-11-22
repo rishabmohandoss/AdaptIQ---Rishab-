@@ -103,6 +103,7 @@ window.AdaptIQ_UI = (() => {
     state.engagedSeconds = 0;
     state.lastFaceTime = 0;
     initDashboard();
+    Bus.emit('session:started', {});
 
     // Show "Warming up…" pill and auto-dismiss after 8s
     const warmupPill = document.getElementById('warmup-pill');
@@ -164,16 +165,10 @@ window.AdaptIQ_UI = (() => {
     initScoreRing();
     initVideoFeed();
 
-    // End session wired in app init; also wire here for safety
-    document.getElementById('btn-end-session')?.addEventListener('click', () => {
-      Bus.emit('session:end', {});
-      endSession();
-    });
-
     // Mic toggle
     const btnMic = document.getElementById('btn-mic-toggle');
     if (btnMic) {
-      btnMic.addEventListener('click', () => {
+      btnMic.onclick = () => {
         const icon = document.getElementById('mic-icon');
         const muted = btnMic.classList.toggle('muted');
         if (icon) icon.className = muted ? 'ti ti-microphone-off' : 'ti ti-microphone';
@@ -182,7 +177,8 @@ window.AdaptIQ_UI = (() => {
         if (video && video.srcObject) {
           video.srcObject.getAudioTracks().forEach(t => { t.enabled = !muted; });
         }
-      });
+        Bus.emit('microphone:changed', { muted });
+      };
     }
 
     // Camera toggle
@@ -1045,8 +1041,29 @@ window.AdaptIQ_UI = (() => {
   // ============================================================
   // SESSION SUMMARY
   // ============================================================
-  function showSummary(data) {
+  function renderSpeakingPace(summary) {
+    const status = document.getElementById('summary-pace-status');
+    const list = document.getElementById('summary-pace-findings');
+    if (!status || !list) return;
+    list.replaceChildren();
+    list.hidden = !summary?.findings.length;
+    status.textContent = !summary ? '' : summary.status === 'not enough data'
+      ? 'Not enough data to compare speaking pace.'
+      : summary.findings.length
+        ? 'Windows where your speaking pace differed from your session median.'
+        : 'No noticeable speaking pace changes in the measured windows.';
+    for (const finding of summary?.findings ?? []) {
+      const seconds = Math.floor(finding.startMs / 1000);
+      const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+      const item = document.createElement('li');
+      item.textContent = `${time} · Question ${Number(finding.questionId) + 1} · ${Math.round(finding.wpm)} WPM (session median ${Math.round(finding.baselineWpm)} WPM)`;
+      list.append(item);
+    }
+  }
+
+  function showSummary(data, paceSummary) {
     showScreen('summary');
+    renderSpeakingPace(paceSummary);
 
     document.getElementById('summary-grade').textContent    = data.grade || '—';
     document.getElementById('summary-subtitle').textContent =
@@ -1058,7 +1075,7 @@ window.AdaptIQ_UI = (() => {
     document.getElementById('sum-vocal').textContent   = data.vocalConfidence ? Math.round(data.vocalConfidence) : '--';
 
     // Summary actions
-    document.getElementById('btn-new-session').addEventListener('click', () => {
+    document.getElementById('btn-new-session').onclick = () => {
       state.profile = null;
       state.sessionSeconds = 0;
       state.questionIndex = 0;
@@ -1071,8 +1088,9 @@ window.AdaptIQ_UI = (() => {
       // Reset coach panel
       const coachTip = document.getElementById('coach-tip-text');
       if (coachTip) coachTip.innerHTML = '<em>Listening for cues…</em>';
+      renderSpeakingPace(null);
       showScreen('profile');
-    });
+    };
 
     document.getElementById('btn-export').addEventListener('click', exportReport);
   }
@@ -1470,7 +1488,11 @@ window.AdaptIQ_UI = (() => {
     Bus.on('calibration:complete',  handleCalibrationComplete);
     Bus.on('models:loaded',         () => { /* models ready */ });
     Bus.on('session:end', (data) => {
-      if (data && data.summary) showSummary(data.summary);
+      if (data && data.summary) {
+        clearInterval(state.sessionTimerInterval);
+        clearInterval(state.engagementTimerInterval);
+        showSummary(data.summary.scores ?? data.summary, data.paceSummary);
+      }
       else endSession();
     });
     Bus.on('session:debrief', ({ text }) => {
