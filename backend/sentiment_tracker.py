@@ -1,7 +1,8 @@
-"""Validate AdaptIQ interview analytics inputs and measure personal speech pace."""
+"""Validate AdaptIQ interview analytics inputs and analyze speech patterns."""
 
 import json
 import math
+import re
 from statistics import median
 
 
@@ -13,6 +14,12 @@ _BOUNDS = ("startMs", "endMs")
 _ANSWER_FIELDS = ("sessionId", "questionId", "answerId", *_BOUNDS, "transcriptSegments")
 _SEGMENT_FIELDS = (*_BOUNDS, "text")
 _MEASUREMENTS = ("wordCount", "speakingMs", "pauseCount", "pauseMs", "fillerCount")
+_RESTART_CUE = re.compile(
+    r"(?:^|[.!?]\s+)\s*(?:(?:actually|sorry)[,\s]+)?"
+    r"(?:let\s+me\s+(?:start\s+(?:again|over)|restart)"
+    r"|i(?:['’]ll|\s+will)\s+start\s+(?:again|over))\b",
+    re.IGNORECASE,
+)
 
 
 # checks that all fiels have data and there are no extra fields. if there is, returns an error w/ a path to file
@@ -245,4 +252,55 @@ def analyze_pace(
             for answer, start, end, wpm in sorted(observations, key=lambda item: item[1])
             if abs(wpm - baseline) / baseline >= threshold
         ]
+    return summaries
+
+
+def analyze_answer_moments(data, *, pause_threshold_ms=3000):
+    """Return version 1 pause and possible restart summaries by session ID.
+
+    Timed transcript segments serve as speech intervals. Only gaps bracketed
+    by speech within one answer are eligible. A restart cue is timestamped at
+    the start of its containing segment because word timing is unavailable.
+    """
+    _check_integer(pause_threshold_ms, "pause_threshold_ms")
+    if pause_threshold_ms == 0:
+        raise ValueError("pause_threshold_ms must be positive")
+
+    summaries = {}
+    for session_id, answers in prepare_sessions(data).items():
+        findings = []
+        pause_timing = {}
+        for answer in answers:
+            answer_id = answer["answerId"]
+            identity = {"questionId": answer["questionId"], "answerId": answer_id}
+            segments = answer["transcriptSegments"]
+            pause_timing[answer_id] = "available" if len(segments) >= 2 else "unavailable"
+            speech_end = None
+            for segment in segments:
+                start, end = segment["startMs"], segment["endMs"]
+                if speech_end is not None and start - speech_end >= pause_threshold_ms:
+                    findings.append({
+                        **identity,
+                        "startMs": speech_end,
+                        "endMs": start,
+                        "kind": "pause",
+                        "reason": "Gap between timed speech segments reached the pause threshold.",
+                    })
+                speech_end = end if speech_end is None else max(speech_end, end)
+
+                if _RESTART_CUE.search(segment["text"]):
+                    findings.append({
+                        **identity,
+                        "startMs": start,
+                        "endMs": end,
+                        "kind": "possible_restart",
+                        "reason": "Transcript contains an explicit start-over phrase.",
+                    })
+
+        summaries[session_id] = {
+            "version": 1,
+            "sessionId": session_id,
+            "pauseTimingByAnswer": pause_timing,
+            "findings": sorted(findings, key=lambda finding: finding["startMs"]),
+        }
     return summaries

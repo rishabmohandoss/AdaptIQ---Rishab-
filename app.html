@@ -3915,7 +3915,7 @@ Return ONLY a JSON array, each element: {"cat": "<one of the allowed types>", "q
       <div class="h-rule"></div>
 
       <section aria-labelledby="summary-pace-title" style="margin-top: 24px; padding: 20px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border);">
-        <h2 id="summary-pace-title" class="panel-section-label" style="border: none; padding: 0; margin: 0 0 12px;">Speaking pace</h2>
+        <h2 id="summary-pace-title" class="panel-section-label" style="border: none; padding: 0; margin: 0 0 12px;">Speaking pace and pauses</h2>
         <p id="summary-pace-status"></p>
         <ul id="summary-pace-findings" hidden></ul>
       </section>
@@ -4601,6 +4601,9 @@ const AudioEngine = (() => {
   // finalized speech-recognition result — replaces a single concatenated string
   // so downstream consumers (session report, live coach) get per-utterance timing.
   let transcript = [];
+  let analyticsTrack = null;
+  const canMeasureSpeech = () => running && analyticsTrack?.enabled && !analyticsTrack.muted &&
+    analyticsTrack.readyState === 'live';
   let lastFinalTime = null;
   let wordTimestamps = [];
 
@@ -4632,15 +4635,15 @@ const AudioEngine = (() => {
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
-    recognition.onspeechstart = () => { if (running) speakingPace.speechStart(); };
-    recognition.onspeechend = () => { if (running) speakingPace.speechEnd(); };
+    recognition.onspeechstart = () => { if (canMeasureSpeech()) speakingPace.speechStart(); };
+    recognition.onspeechend = () => { if (canMeasureSpeech()) speakingPace.speechEnd(); };
     recognition.onresult = (event) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const t = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
           const now = Date.now();
           const text = t.trim();
-          if (running) speakingPace.finalResult(text, event.results[i][0].confidence);
+          if (canMeasureSpeech()) speakingPace.finalResult(text, event.results[i][0].confidence);
           const words = text.split(/\s+/).filter(Boolean).length;
           const elapsedSec = lastFinalTime ? Math.max(1, (now - lastFinalTime) / 1000) : Math.max(1, words / 2.25);
           const wpm = Math.round(words / (elapsedSec / 60));
@@ -4664,6 +4667,9 @@ const AudioEngine = (() => {
   async function init(mediaStream) {
     // Use provided stream or request audio-only (for backward compatibility with test harness)
     const stream = mediaStream || (await navigator.mediaDevices.getUserMedia({ audio: true, video: false }));
+    analyticsTrack = stream.getAudioTracks()[0] ?? null;
+    analyticsTrack?.addEventListener('mute', () => speakingPace.interrupt());
+    analyticsTrack?.addEventListener('ended', () => speakingPace.interrupt());
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const source = audioCtx.createMediaStreamSource(stream);
     analyser = audioCtx.createAnalyser();

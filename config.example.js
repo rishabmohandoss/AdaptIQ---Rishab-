@@ -8,3 +8,7 @@
 window.ADAPTIQ_CONFIG = {
   claudeApiKey: "",
 };
+
+window.AdaptIQPaceConfig = {
+  pauseThresholdMs: 3000,
+};

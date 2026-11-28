@@ -60,6 +60,12 @@ The Python implementation, `backend.sentiment_tracker.analyze_pace`, accepts the
 
 The interview page computes and shows this feedback in the browser. Set `window.AdaptIQPaceConfig` in `config.js` to override `windowMs`, `threshold`, `minWindows`, or `minConfidence`. The browser implementation uses the existing recognizer's speech start, speech end, and final transcript events. It skips windows with missing, uncertain, or boundary-crossing speech timing. It retains only word counts and timing during the current answer, then only per-window pace observations until the review. The browser's existing speech recognition service provides the transcript. The pace calculation and its findings stay in the tab.
 
+`backend.sentiment_tracker.analyze_answer_moments` accepts the same inputs as `prepare_sessions` and returns version 1 summaries keyed by session ID. Its `pause_threshold_ms` defaults to 3000 ms. It flags gaps at or above that threshold between timed transcript segments from the same answer and accounts for overlapping segments. Leading and trailing gaps and time between answers are excluded. Each answer's `pauseTimingByAnswer` entry is `unavailable` when fewer than two timed segments are supplied. Producers should supply `[]` when segment timing is unavailable. Aggregate speech windows do not locate individual pauses.
+
+The provisional restart rule matches explicit start-over phrases at the start of a segment or sentence, such as “Let me start again,” “Let me restart,” and “I'll start over,” with an optional “actually” or “sorry” lead-in. Each match is a `possible_restart` finding timestamped to its containing segment. Both `pause` and `possible_restart` findings include a `reason` and use the shared finding IDs and time bounds.
+
+The browser applies the same cue rule and uses completed speech-recognition episodes as timing evidence. A recognition interruption or question change breaks continuity for pause detection. The interview review shows the speech feedback when the candidate ends the session. Set `window.AdaptIQPaceConfig.pauseThresholdMs` in `config.js` to change the browser's default of 3000 ms.
+
 ## Access and deletion
 
 - Capture and feature extraction happen upstream on the candidate's device. Release raw audio buffers and video frames after feature extraction and stop capture and clear remaining buffers at session end, cancellation, or error. The analytics module accepts transcript text and numeric measurements only.

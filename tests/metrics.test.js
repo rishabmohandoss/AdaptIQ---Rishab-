@@ -301,5 +301,103 @@ test('filler words ("um, like") reduce clarity', () => {
 });
 
 // ───────────────────────────────────────────────────────────────
+const createSpeakingPace = require('../speaking-pace.js');
+
+test('interview speech feedback keeps timed findings within an answer', () => {
+  let now = 0;
+  const tracker = createSpeakingPace({ now: () => now, pauseThresholdMs: 2000 });
+  const speak = (start, end, text) => {
+    now = start;
+    tracker.speechStart();
+    now = end;
+    tracker.speechEnd();
+    tracker.finalResult(text, 0.9);
+  };
+  tracker.start('session', 0);
+  speak(1000, 1500, 'My first idea.');
+  speak(3500, 4500, 'Sorry, let me start again.');
+  speak(7000, 8000, 'My next idea.');
+  now = 10000;
+  tracker.next(1);
+  speak(14000, 15000, 'New answer.');
+  tracker.recognitionEnded();
+  speak(20000, 21000, 'Continued after a recognition interruption.');
+  tracker.speechStart();
+  now = 26000;
+  tracker.next(2);
+  tracker.speechEnd();
+  const summary = tracker.finish();
+  assert.deepStrictEqual(summary.pauseTimingByAnswer, {
+    '1': 'available', '2': 'unavailable', '3': 'unavailable',
+  });
+  assert.deepStrictEqual(summary.findings.map(({ kind, answerId, startMs, endMs }) =>
+    [kind, answerId, startMs, endMs]), [
+    ['pause', '1', 1500, 3500],
+    ['possible_restart', '1', 3500, 4500],
+    ['pause', '1', 4500, 7000],
+  ]);
+  assert(summary.findings.every(finding => finding.reason));
+});
+
+test('interview review describes faster and slower speech, repeated pauses, and possible restarts', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'ui.js'), 'utf8');
+  const render = ui.match(/function renderSpeakingPace\(summary\) \{[\s\S]*?\n  \}/);
+  assert(render, 'speech feedback renderer not found');
+  const status = {};
+  const list = {
+    replaceChildren() { this.items = []; },
+    append(item) { this.items.push(item.textContent); },
+  };
+  const sandbox = {
+    document: {
+      getElementById: id => id === 'summary-pace-status' ? status : list,
+      createElement: () => ({}),
+    },
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(render[0], sandbox);
+  const finding = { answerId: '1', questionId: '0', startMs: 1000, endMs: 4500 };
+  sandbox.renderSpeakingPace({
+    status: 'ok',
+    pauseTimingByAnswer: { '1': 'available' },
+    findings: [
+      { ...finding, kind: 'pace', wpm: 180, baselineWpm: 140 },
+      { ...finding, kind: 'pace', wpm: 90, baselineWpm: 140 },
+      { ...finding, kind: 'pause' },
+      { ...finding, kind: 'pause', startMs: 6000, endMs: 9500 },
+      { ...finding, kind: 'possible_restart' },
+    ],
+  });
+  assert.strictEqual(list.items.length, 4);
+  assert.match(list.items[0], /spoke faster/);
+  assert.match(list.items[1], /spoke more slowly/);
+  assert.match(list.items[2], /2 long pauses/);
+  assert.match(list.items[3], /may have started your answer over/);
+  sandbox.renderSpeakingPace({ status: 'not enough data', findings: [] });
+  assert(list.hidden);
+  assert.match(status.textContent, /couldn’t measure/);
+});
+
+test('interview speech feedback retains faster and slower pace findings', () => {
+  let now = 0;
+  const tracker = createSpeakingPace({ now: () => now });
+  tracker.start('session', 0);
+  for (const [start, words] of [[1000, 20], [16000, 35], [31000, 50]]) {
+    now = start;
+    tracker.speechStart();
+    now += 1000;
+    tracker.speechEnd();
+    tracker.finalResult('word '.repeat(words), 0.9);
+  }
+  now = 45000;
+  const summary = tracker.finish();
+  assert.strictEqual(summary.status, 'ok');
+  assert.deepStrictEqual(
+    summary.findings.filter(finding => finding.kind === 'pace')
+      .map(({ wpm, baselineWpm }) => [wpm, baselineWpm]),
+    [[80, 140], [200, 140]],
+  );
+});
+
 console.log(`\n${'─'.repeat(50)}\n${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);

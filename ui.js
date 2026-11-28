@@ -1047,16 +1047,53 @@ window.AdaptIQ_UI = (() => {
     if (!status || !list) return;
     list.replaceChildren();
     list.hidden = !summary?.findings.length;
-    status.textContent = !summary ? '' : summary.status === 'not enough data'
-      ? 'Not enough data to compare speaking pace.'
-      : summary.findings.length
-        ? 'Windows where your speaking pace differed from your session median.'
-        : 'No noticeable speaking pace changes in the measured windows.';
-    for (const finding of summary?.findings ?? []) {
+    status.textContent = '';
+    if (!summary) return;
+
+    const paceFindings = summary.findings.filter(finding => finding.kind === 'pace');
+    const paceStatus = summary.status === 'not enough data'
+      ? 'We couldn’t measure enough of your speech to compare your pace.'
+      : paceFindings.length
+        ? 'Your pace changed in parts of this interview.'
+        : 'Your pace was fairly steady in the parts we could measure.';
+    const pauseTiming = Object.values(summary.pauseTimingByAnswer ?? {});
+    const pauseStatus = pauseTiming.includes('available')
+      ? summary.findings.some(finding => finding.kind === 'pause')
+        ? 'A pause is a normal part of speaking. The notes below point out longer gaps you can review.'
+        : 'We didn’t hear any long gaps in the answers we could measure.'
+      : 'We couldn’t measure pauses in this interview.';
+    status.textContent = `${paceStatus} ${pauseStatus}`;
+
+    const pausesByAnswer = new Map();
+    for (const finding of summary.findings) {
+      if (finding.kind !== 'pause') continue;
+      const pauses = pausesByAnswer.get(finding.answerId) ?? [];
+      pauses.push(finding);
+      pausesByAnswer.set(finding.answerId, pauses);
+    }
+
+    for (const finding of summary.findings) {
       const seconds = Math.floor(finding.startMs / 1000);
       const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+      let note;
+      if (finding.kind === 'pace') {
+        note = finding.wpm > finding.baselineWpm
+          ? 'You spoke faster here than in the rest of this interview. Try taking a breath between ideas.'
+          : 'You spoke more slowly here than in the rest of this interview. Try saying the main point first, then adding one detail.';
+      } else if (finding.kind === 'pause') {
+        const pauses = pausesByAnswer.get(finding.answerId);
+        if (pauses[0] !== finding) continue;
+        const duration = Math.round((finding.endMs - finding.startMs) / 100) / 10;
+        note = pauses.length > 1
+          ? `There were ${pauses.length} long pauses in this answer. Try outlining two key points before you begin.`
+          : `You paused for about ${duration} seconds in this answer.`;
+      } else if (finding.kind === 'possible_restart') {
+        note = 'You may have started your answer over here. It’s okay to take a moment and try again.';
+      } else {
+        continue;
+      }
       const item = document.createElement('li');
-      item.textContent = `${time} · Question ${Number(finding.questionId) + 1} · ${Math.round(finding.wpm)} WPM (session median ${Math.round(finding.baselineWpm)} WPM)`;
+      item.textContent = `${time} · Question ${Number(finding.questionId) + 1} · ${note}`;
       list.append(item);
     }
   }
